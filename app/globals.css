@@ -1,0 +1,126 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom animations */
+@keyframes bounce-slow {
+ 0%, 100% {
+   transform: translateY(-5%);
+   animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+ }
+ 50% {
+   transform: translateY(0);
+   animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+ }
+}
+
+@keyframes bounce-in {
+ 0% {
+   opacity: 0;
+   transform: scale(0.95);
+ }
+ 100% {
+   opacity: 1;
+   transform: scale(1);
+ }
+}
+
+/* Animation classes */
+.animate-bounce-slow {
+ animation: bounce-slow 3s infinite;
+}
+
+.animate-bounce-in {
+ animation: bounce-in 0.5s ease-out;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+ width: 8px;
+ height: 8px;
+}
+
+::-webkit-scrollbar-track {
+ background: #f1f1f1;
+ border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+ background: #888;
+ border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+ background: #555;
+}
+
+/* Smooth scroll behavior */
+html {
+ scroll-behavior: smooth;
+}
+
+/* Focus styles for accessibility */
+*:focus {
+ outline: 2px solid #4F46E5;
+ outline-offset: 2px;
+}
+
+/* Custom gradient text */
+.gradient-text {
+ background: linear-gradient(to right, #3B82F6, #8B5CF6);
+ -webkit-background-clip: text;
+ -webkit-text-fill-color: transparent;
+ background-clip: text;
+}
+
+/* Glassmorphism effect */
+.glass {
+ background: rgba(255, 255, 255, 0.1);
+ backdrop-filter: blur(10px);
+ border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Loading spinner */
+.spinner {
+ border: 3px solid #f3f3f3;
+ border-top: 3px solid #3B82F6;
+ border-radius: 50%;
+ width: 40px;
+ height: 40px;
+ animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+ 0% { transform: rotate(0deg); }
+ 100% { transform: rotate(360deg); }
+}
+
+/* Responsive typography */
+@media (max-width: 640px) {
+ html {
+   font-size: 14px;
+ }
+}
+
+/* Print styles */
+@media print {
+ .no-print {
+   display: none !important;
+ }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+ * {
+   border-width: 2px !important;
+ }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+ * {
+   animation-duration: 0.01ms !important;
+   animation-iteration-count: 1 !important;
+   transition-duration: 0.01ms !important;
+ }
+}

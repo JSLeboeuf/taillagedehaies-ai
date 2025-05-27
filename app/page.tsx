@@ -1,6 +1,7 @@
-'use client';
+﻿'use client'
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'
+import Script from 'next/script'
 import { 
   Phone, DollarSign, Clock, Check, AlertCircle, Shield, 
   Building2, Calculator, ChevronRight, CreditCard, Lock, 
@@ -8,38 +9,26 @@ import {
   TrendingUp, Zap, Bot, Headphones, BarChart3, Target,
   Sparkles, Trophy, FileText, Send, Eye, Brain,
   CheckCircle, X, Mic, MicOff, Download, ExternalLink,
-  Gift, Rocket, Heart, ThumbsUp, Bell
-} from 'lucide-react';
-import Script from 'next/script';
+  Gift, Rocket, Heart, ThumbsUp, Bell, ArrowRight
+} from 'lucide-react'
 
-// Configuration avec VOS vraies clés
+// Configuration
 const CONFIG = {
-  // APIs
-  AI_AGENT_ID: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_CLOSER || 'agent_01jw6jap8jfvvthybsan5b9ty2',
-  STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-  CALENDLY_URL: process.env.NEXT_PUBLIC_CALENDLY_URL || 'https://calendly.com/autoscaleai/decouverte',
-  
-  // Contact
-  PHONE_NUMBER: '+14382294244',
-  WHATSAPP: 'https://wa.me/14382294244',
-  EMAIL: 'jsleboeuf3@gmail.com',
-  
-  // Business
-  TOTAL_SPOTS: 5,
   SPOTS_TAKEN: 3,
-  PRICE_NOW: 5000,
-  PRICE_FUTURE: 10000,
-  MONTHLY_FEE: 100,
-  
-  // Stats temps réel
-  CALLS_SAVED_TODAY: 147,
-  ACTIVE_VISITORS: 23,
-  AVG_MISSED_CALLS: 4,
-  AVG_CONTRACT_VALUE: 600,
-  AVG_ROI_WEEKS: 3.7
-};
+  SPOTS_TOTAL: 5,
+  LIVE_UPDATE_INTERVAL: 30000,
+  COUNTDOWN_HOURS: 48,
+  HEYGEN_VIDEO_ID: '7d66ab95a1c04a57817a97d426cb9303',
+  STRIPE_LINK: 'https://buy.stripe.com/test_00g7uM5XI1Rn9uJg3R6c007',
+  CALENDLY_URL: 'https://calendly.com/autoscaleai/decouverte',
+  AI_AGENT_SOPHIE: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_SOPHIE || '',
+  AI_AGENT_OUTBOUND: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_OUTBOUND || '',
+  AI_AGENT_CLOSER: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_CLOSER || '',
+  AI_PHONE: process.env.TWILIO_PHONE_NUMBER || '(438) 900-4385',
+  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+}
 
-// Statistiques percutantes
+// Stats principales
 const KILLER_STATS = {
   harvard: { value: "21X", desc: "plus de chances après 1 minute" },
   missedCalls: { value: "62%", desc: "des appels non répondus" },
@@ -49,1292 +38,1795 @@ const KILLER_STATS = {
   phoneConversion: { value: "10-15X", desc: "meilleur que les leads web" },
   industryMissed: { value: "27%", desc: "d'appels manqués (taillage)" },
   preferPhone: { value: "65%", desc: "préfèrent appeler" },
-  frustrationTransfer: { value: "79%", desc: "transférés au moins 1 fois" },
-  retention: { value: "5%", desc: "d'augmentation = 25-95% profits" }
-};
+}
+
+// Types
+interface UserData {
+  name: string
+  phone: string
+  email: string
+  company: string
+  missedCalls: number
+  avgPrice: number
+  dailyLoss: number
+  weeklyLoss: number
+  monthlyLoss: number
+  yearlyLoss: number
+  fiveYearLoss: number
+  currentSolution: string
+  urgency: string
+  budget: string
+  decisionMaker: boolean
+  nepqScore: number
+  stage: string
+  leadId?: string
+  sessionId: string
+}
+
+interface StageProps {
+  navigateToStage: (stage: string) => void
+  userData: UserData
+  setUserData: (data: any) => void
+  trackEvent: (event: string, value?: any, data?: any) => void
+  liveStats?: any
+  countdown?: any
+  chatMessages?: any[]
+  setChatMessages?: (messages: any[]) => void
+  aiTyping?: boolean
+  setAiTyping?: (typing: boolean) => void
+  sendSMS?: (message: string, to?: string) => Promise<any>
+}
+
+// Widget ElevenLabs déclaration
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'elevenlabs-convai': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+        'agent-id': string;
+      }, HTMLElement>;
+    }
+  }
+}
 
 export default function Home() {
-  // État global
-  const [stage, setStage] = useState(1); // Utiliser nombres au lieu de strings
-  const [userData, setUserData] = useState({
-    // Infos de base
+  // État principal
+  const [currentStage, setCurrentStage] = useState('landing')
+  const [userData, setUserData] = useState<UserData>({
     name: '',
     phone: '',
     email: '',
     company: '',
-    city: '',
-    
-    // Calculs business
     missedCalls: 4,
     avgPrice: 600,
-    currentRevenue: 0,
-    desiredRevenue: 0,
-    
-    // Pertes calculées
     dailyLoss: 0,
-    weeklyLoss: 2400,
-    monthlyLoss: 9600,
-    yearlyLoss: 48000,
-    fiveYearLoss: 240000,
-    roiWeeks: 3,
-    roiDays: 21,
-    
-    // Qualification NEPQ
-    pain: '',
-    urgencyLevel: 0,
-    decisionMaker: true,
+    weeklyLoss: 0,
+    monthlyLoss: 0,
+    yearlyLoss: 0,
+    fiveYearLoss: 0,
+    currentSolution: '',
+    urgency: '',
     budget: '',
-    timeline: '',
-    objections: [],
+    decisionMaker: true,
     nepqScore: 0,
-    qualified: false,
-    
-    // Tracking
-    timeOnPage: 0,
-    interactions: [],
-    abandonPoint: null,
-    source: 'direct',
-    
-    // Post-achat
-    contractSigned: false,
-    paymentCompleted: false,
-    bookingDate: null,
-    onboardingNotes: ''
-  });
+    stage: 'landing',
+    sessionId: generateSessionId()
+  })
 
   // États UI
-  const [isLoading, setIsLoading] = useState(false);
-  const [showElevenLabs, setShowElevenLabs] = useState(false);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [aiTyping, setAiTyping] = useState(false);
-  const [countdown, setCountdown] = useState({ days: 2, hours: 14, minutes: 37, seconds: 0 });
   const [liveStats, setLiveStats] = useState({
-    viewersNow: 23,
-    spotsLeft: CONFIG.TOTAL_SPOTS - CONFIG.SPOTS_TAKEN,
-    callsSavedToday: CONFIG.CALLS_SAVED_TODAY,
-    lastSignup: "Il y a 3 heures - Marc B. de Longueuil"
-  });
+    activeVisitors: 47,
+    callsAnswered: 12847,
+    moneySaved: 3248000,
+    lastSignup: '2 minutes'
+  })
+  const [countdown, setCountdown] = useState(CONFIG.COUNTDOWN_HOURS * 3600)
+  const [chatMessages, setChatMessages] = useState<any[]>([])
+  const [aiTyping, setAiTyping] = useState(false)
 
-  // Refs pour tracking
-  const startTime = useRef(Date.now());
-  const stageStartTime = useRef(Date.now());
+  // Génération de session ID
+  function generateSessionId() {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }
 
-  // Calculs automatiques des pertes
-  useEffect(() => {
-    const conversionRate = 0.3; // 30% de conversion réaliste
-    const dailyLoss = Math.round((userData.missedCalls / 5) * userData.avgPrice * conversionRate);
-    const weeklyLoss = Math.round(userData.missedCalls * userData.avgPrice * conversionRate);
-    const monthlyLoss = Math.round(weeklyLoss * 4.33);
-    const yearlyLoss = Math.round(weeklyLoss * 52);
-    const fiveYearLoss = yearlyLoss * 5;
-    const roiDays = Math.ceil(CONFIG.PRICE_NOW / dailyLoss) || 21;
-    const roiWeeks = Math.ceil(roiDays / 7);
+  // Tracking des événements
+  const trackEvent = async (event: string, value?: any, data?: any) => {
+    console.log('📊 Event:', event, value, data)
     
-    setUserData(prev => ({
-      ...prev,
-      dailyLoss,
-      weeklyLoss,
-      monthlyLoss,
-      yearlyLoss,
-      fiveYearLoss,
-      roiDays,
-      roiWeeks
-    }));
-  }, [userData.missedCalls, userData.avgPrice]);
-
-  // Countdown temps réel
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      const endOfWeek = new Date();
-      
-      // Vendredi 17h
-      const daysUntilFriday = (5 - now.getDay() + 7) % 7 || 7;
-      endOfWeek.setDate(now.getDate() + daysUntilFriday);
-      endOfWeek.setHours(17, 0, 0, 0);
-      
-      const diff = endOfWeek.getTime() - now.getTime();
-      
-      if (diff > 0) {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        
-        setCountdown({ days, hours, minutes, seconds });
-      }
-    }, 1000);
+    // Google Analytics
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', event, {
+        value: value,
+        ...data
+      })
+    }
     
-    return () => clearInterval(timer);
-  }, []);
-
-  // Fonction de tracking
-  const trackEvent = async (eventName: string, value: any = null) => {
-    console.log('📊 Event:', eventName, value);
+    // Facebook Pixel
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      (window as any).fbq('track', event, {
+        value: value,
+        currency: 'CAD',
+        ...data
+      })
+    }
     
-    // Envoyer à votre API
+    // Analytics custom via API
     try {
       await fetch('/api/analytics/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          event: eventName,
-          value: value,
-          stage: stage,
+          event,
+          value,
+          stage: currentStage,
           userData: {
             name: userData.name,
             weeklyLoss: userData.weeklyLoss,
             nepqScore: userData.nepqScore
-          }
+          },
+          sessionId: userData.sessionId,
+          timestamp: new Date().toISOString()
         })
-      });
+      })
     } catch (error) {
-      console.error('Error tracking event:', error);
+      console.error('Analytics error:', error)
     }
-
-    // Google Analytics
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', eventName, {
-        event_category: 'Funnel',
-        event_label: `Stage ${stage}`,
-        value: value
-      });
-    }
-  };
+  }
 
   // Navigation entre stages
-  const handleNextStage = () => {
-    trackEvent(`stage_${stage}_completed`, userData.weeklyLoss);
-    stageStartTime.current = Date.now();
-    setStage(prev => prev + 1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const navigateToStage = (stage: string) => {
+    setCurrentStage(stage)
+    setUserData({ ...userData, stage })
+    trackEvent('stage_transition', 1, { from: currentStage, to: stage })
+    window.scrollTo(0, 0)
+  }
 
-  // Render différent stages
-  const renderStage = () => {
-    switch(stage) {
-      case 1:
-        return <LandingStage 
-          userData={userData}
-          setUserData={setUserData}
-          handleNextStage={handleNextStage}
-          trackEvent={trackEvent}
-          liveStats={liveStats}
-          countdown={countdown}
-        />;
-      
-      case 2:
-        return <AIQualificationStage
-          userData={userData}
-          setUserData={setUserData}
-          handleNextStage={handleNextStage}
-          trackEvent={trackEvent}
-          chatMessages={chatMessages}
-          setChatMessages={setChatMessages}
-          aiTyping={aiTyping}
-          setAiTyping={setAiTyping}
-          showElevenLabs={showElevenLabs}
-          setShowElevenLabs={setShowElevenLabs}
-        />;
-      
-      case 3:
-        return <DeepCalculatorStage
-          userData={userData}
-          setUserData={setUserData}
-          handleNextStage={handleNextStage}
-          trackEvent={trackEvent}
-        />;
-        
-      case 4:
-        return <ProofDemoStage
-          userData={userData}
-          handleNextStage={handleNextStage}
-          trackEvent={trackEvent}
-        />;
-        
-      case 5:
-        return <OfferContractStage
-          userData={userData}
-          setUserData={setUserData}
-          handleNextStage={handleNextStage}
-          trackEvent={trackEvent}
-          countdown={countdown}
-        />;
-        
-      case 6:
-        return <PaymentStage
-          userData={userData}
-          setUserData={setUserData}
-          handleNextStage={handleNextStage}
-          trackEvent={trackEvent}
-        />;
-        
-      case 7:
-        return <BookingStage
-          userData={userData}
-          setUserData={setUserData}
-          handleNextStage={handleNextStage}
-          trackEvent={trackEvent}
-        />;
-        
-      case 8:
-        return <WelcomeVIPStage
-          userData={userData}
-          trackEvent={trackEvent}
-        />;
-        
-      default:
-        return <LandingStage 
-          userData={userData}
-          setUserData={setUserData}
-          handleNextStage={handleNextStage}
-          trackEvent={trackEvent}
-          liveStats={liveStats}
-          countdown={countdown}
-        />;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header intelligent */}
-      <header className="bg-white border-b sticky top-0 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-2">
-                <Bot size={24} />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold">IA Réceptionniste #1 au Québec</h1>
-                <p className="text-xs text-gray-600">Par Jean-Samuel Leboeuf</p>
-              </div>
-            </div>
-            
-            <div className="text-right">
-              <div className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold animate-pulse">
-                ⏰ {countdown.days}j {countdown.hours}h {countdown.minutes}m
-              </div>
-              <p className="text-xs text-green-600 font-semibold mt-1">
-                <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></span>
-                {liveStats.viewersNow} en ligne
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Progress bar */}
-      <div className="bg-white border-b px-4 py-2">
-        <div className="max-w-4xl mx-auto">
-          <div className="relative">
-            <div className="bg-gray-200 h-2 rounded-full overflow-hidden">
-              <div 
-                className="bg-gradient-to-r from-blue-500 to-green-500 h-full transition-all duration-500"
-                style={{ width: `${(stage / 8) * 100}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <main className="pb-20">
-        {renderStage()}
-      </main>
-
-      {/* Scripts */}
-      <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-BYDHGJR1F9"
-        strategy="afterInteractive"
-      />
-      <Script id="google-analytics" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-BYDHGJR1F9');
-        `}
-      </Script>
-    </div>
-  );
-}
-
-// ========== STAGE 1: LANDING ==========
-const LandingStage = ({ userData, setUserData, handleNextStage, trackEvent, liveStats, countdown }) => {
-  const [calculated, setCalculated] = useState(false);
-
-  useEffect(() => {
-    trackEvent('page_view_landing');
-  }, []);
-
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Hero Section */}
-      <section className="mb-12">
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl p-8 md:p-12">
-          {/* Badge d'autorité */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full font-bold text-sm md:text-base animate-pulse">
-              <Trophy size={20} />
-              <span>PREMIER AU QUÉBEC • {CONFIG.SPOTS_TAKEN} CLIENTS ACTIFS</span>
-              <Trophy size={20} />
-            </div>
-          </div>
-
-          {/* Titre principal */}
-          <div className="text-center mb-10">
-            <h1 className="text-4xl md:text-6xl font-black mb-6 leading-tight">
-              Tu Perds{' '}
-              <span className="text-red-600">
-                {userData.weeklyLoss.toLocaleString()}$/Semaine
-              </span>
-              <br />
-              en Appels Manqués
-            </h1>
-            
-            {/* Stat Harvard */}
-            <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4 md:p-6 max-w-3xl mx-auto">
-              <p className="text-lg md:text-2xl text-gray-800">
-                <span className="font-bold">Harvard Business Review:</span> Répondre en 1 minute = 
-                <span className="text-green-600 font-black text-2xl md:text-3xl"> 21X</span> plus de chances de convertir
-              </p>
-              <p className="text-sm md:text-base text-gray-600 mt-2">
-                Après 5 minutes? <span className="text-red-600 font-bold">-400% de conversion</span>
-              </p>
-            </div>
-          </div>
-
-          {/* CTA Principal */}
-          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 md:p-8 text-white mb-8">
-            <h3 className="text-2xl md:text-3xl font-bold mb-4 text-center">
-              <MessageSquare className="inline animate-bounce mr-3" size={32} />
-              Parle avec Sophie (IA) - Elle calcule TES pertes exactes
-            </h3>
-            <button
-              onClick={handleNextStage}
-              className="w-full bg-white text-green-600 py-4 rounded-lg font-bold text-xl hover:shadow-xl transition-all"
-            >
-              Commencer la conversation maintenant →
-            </button>
-            <p className="text-center text-sm mt-3">
-              <Sparkles className="inline mr-2" size={16} />
-              89% des gens qui testent l'IA deviennent clients en 24h
-            </p>
-          </div>
-
-          {/* Quick Calculator */}
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h4 className="font-bold text-lg mb-4">💰 Calcul rapide de TES pertes:</h4>
-            
-            <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-600 mb-2">
-                  Appels manqués/semaine:
-                </label>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setUserData(prev => ({ 
-                      ...prev, 
-                      missedCalls: Math.max(1, prev.missedCalls - 1) 
-                    }))}
-                    className="w-10 h-10 bg-white rounded-lg flex items-center justify-center hover:bg-gray-100"
-                  >
-                    -
-                  </button>
-                  <div className="flex-1 bg-white rounded-lg py-2 text-center">
-                    <span className="text-2xl font-bold">{userData.missedCalls}</span>
-                  </div>
-                  <button
-                    onClick={() => setUserData(prev => ({ 
-                      ...prev, 
-                      missedCalls: prev.missedCalls + 1 
-                    }))}
-                    className="w-10 h-10 bg-white rounded-lg flex items-center justify-center hover:bg-gray-100"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-semibold text-gray-600 mb-2">
-                  Valeur moyenne ($):
-                </label>
-                <select
-                  value={userData.avgPrice}
-                  onChange={(e) => setUserData(prev => ({ 
-                    ...prev, 
-                    avgPrice: parseInt(e.target.value) 
-                  }))}
-                  className="w-full p-3 bg-white rounded-lg font-bold text-lg"
-                >
-                  {[300, 400, 500, 600, 800, 1000, 1200, 1500].map(price => (
-                    <option key={price} value={price}>{price}$</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {!calculated ? (
-              <button
-                onClick={() => {
-                  setCalculated(true);
-                  trackEvent('quick_calc_completed', userData.weeklyLoss);
-                }}
-                className="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700"
-              >
-                Calculer mes pertes →
-              </button>
-            ) : (
-              <div className="bg-red-100 border-2 border-red-300 rounded-lg p-4 text-center">
-                <p className="text-3xl font-black text-red-600">
-                  Tu perds {userData.weeklyLoss.toLocaleString()}$/semaine!
-                </p>
-                <p className="text-gray-700 mt-2">
-                  Soit {userData.yearlyLoss.toLocaleString()}$ par année 😱
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Grid */}
-      <section className="mb-12">
-        <h2 className="text-3xl font-bold text-center mb-8">
-          📊 Les Chiffres Qui Font Mal
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Object.entries(KILLER_STATS).slice(0, 8).map(([key, stat]) => (
-            <div 
-              key={key}
-              className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition-all"
-            >
-              <p className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                {stat.value}
-              </p>
-              <p className="text-sm text-gray-600 mt-2">{stat.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Urgence finale */}
-      <section>
-        <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-2xl p-8 text-center">
-          <h3 className="text-3xl font-bold mb-4">
-            ⏰ Pendant que tu lis ça, tu perds {Math.round(userData.dailyLoss / 24)}$/heure
-          </h3>
-          <p className="text-xl mb-6">
-            Places restantes: {liveStats.spotsLeft} sur {CONFIG.TOTAL_SPOTS}
-          </p>
-          <button
-            onClick={handleNextStage}
-            className="bg-white text-red-600 px-8 py-4 rounded-lg font-bold text-xl hover:scale-105 transition-transform"
-          >
-            Je veux arrêter l'hémorragie MAINTENANT →
-          </button>
-        </div>
-      </section>
-    </div>
-  );
-};
-
-// ========== STAGE 2: AI QUALIFICATION ==========
-const AIQualificationStage = ({ 
-  userData, 
-  setUserData, 
-  handleNextStage, 
-  trackEvent,
-  chatMessages,
-  setChatMessages,
-  aiTyping,
-  setAiTyping,
-  showElevenLabs,
-  setShowElevenLabs
-}) => {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [userInput, setUserInput] = useState('');
-  const messagesEndRef = useRef(null);
-
-  // Questions NEPQ
-  const nepqFlow = [
-    {
-      id: 'name',
-      question: "Salut! Moi c'est Sophie. C'est quoi ton prénom? 😊",
-      field: 'name',
-      validation: (value) => value.length > 1,
-      followUp: (value) => `Parfait ${value}! Enchanté.`
-    },
-    {
-      id: 'missed_calls',
-      question: "[NAME], combien d'appels tu manques par semaine?",
-      field: 'missedCalls',
-      validation: (value) => parseInt(value) > 0,
-      followUp: (value) => `${value} appels... Ça fait mal!`
-    },
-    {
-      id: 'contract_value',
-      question: "C'est quoi la valeur moyenne d'un contrat pour toi?",
-      field: 'avgPrice',
-      validation: (value) => parseInt(value) > 0,
-      followUp: () => "OK laisse-moi calculer..."
-    },
-    {
-      id: 'phone',
-      question: "Dernière question: ton numéro pour recevoir le résumé?",
-      field: 'phone',
-      validation: (value) => value.length >= 10,
-      followUp: () => "Parfait! Regarde ça..."
-    }
-  ];
-
-  useEffect(() => {
-    if (chatMessages.length === 0) {
-      trackEvent('ai_qualification_started');
-      addBotMessage(nepqFlow[0].question);
-    }
-  }, []);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
-
-  const addBotMessage = (text, delay = 1500) => {
-    setAiTyping(true);
+  // Calcul des pertes
+  const calculateLosses = (missedCalls: number, avgPrice: number) => {
+    const conversionRate = 0.3 // 30% réaliste
+    const dailyLoss = Math.round((missedCalls / 5) * avgPrice * conversionRate)
+    const weeklyLoss = Math.round(missedCalls * avgPrice * conversionRate)
+    const monthlyLoss = Math.round(weeklyLoss * 4.33)
+    const yearlyLoss = Math.round(weeklyLoss * 52)
+    const fiveYearLoss = yearlyLoss * 5
     
-    setTimeout(() => {
-      let processedText = text
-        .replace('[NAME]', userData.name || 'Mon ami');
-      
-      setChatMessages(prev => [...prev, {
-        type: 'bot',
-        text: processedText,
-        timestamp: new Date()
-      }]);
-      
-      setAiTyping(false);
-    }, delay);
-  };
+    return { dailyLoss, weeklyLoss, monthlyLoss, yearlyLoss, fiveYearLoss }
+  }
 
-  const handleUserResponse = (response) => {
-    if (!response.trim()) return;
-    
-    setChatMessages(prev => [...prev, {
-      type: 'user',
-      text: response,
-      timestamp: new Date()
-    }]);
-    
-    const currentQ = nepqFlow[currentQuestion];
-    
-    if (currentQ.validation(response)) {
-      // Update userData
-      if (currentQ.field === 'missedCalls' || currentQ.field === 'avgPrice') {
-        const numValue = parseInt(response);
-        setUserData(prev => ({ ...prev, [currentQ.field]: numValue }));
-      } else {
-        setUserData(prev => ({ ...prev, [currentQ.field]: response }));
-      }
-      
-      // Follow up
-      addBotMessage(currentQ.followUp(response), 1000);
-      
-      // Update NEPQ score
-      const newScore = Math.round(((currentQuestion + 1) / nepqFlow.length) * 100);
-      setUserData(prev => ({ ...prev, nepqScore: newScore }));
-      
-      // Next question ou fin
-      if (currentQuestion < nepqFlow.length - 1) {
-        setCurrentQuestion(prev => prev + 1);
-        setTimeout(() => {
-          addBotMessage(nepqFlow[currentQuestion + 1].question);
-        }, 2500);
-      } else {
-        // Qualification complète
-        setTimeout(() => {
-          addBotMessage(
-            `🎉 ${userData.name}! Tu perds ${userData.weeklyLoss.toLocaleString()}$/semaine! 
-            C'est ${userData.yearlyLoss.toLocaleString()}$ par année! On va régler ça...`
-          );
-          setTimeout(handleNextStage, 3000);
-        }, 2000);
-      }
-    }
-    
-    setUserInput('');
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-        {/* Header du chat */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 md:p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                  <Bot className="text-blue-600" size={28} />
-                </div>
-                <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></span>
-              </div>
-              <div className="text-white">
-                <h3 className="font-bold text-lg">Sophie - Assistante IA</h3>
-                <p className="text-sm opacity-90">En ligne • Répond instantanément</p>
-              </div>
-            </div>
-            
-            <button
-              onClick={() => setShowElevenLabs(!showElevenLabs)}
-              className="p-2 bg-white/20 rounded-lg text-white"
-            >
-              <Headphones size={20} />
-            </button>
-          </div>
-          
-          {/* Progress bar */}
-          <div className="mt-4">
-            <div className="bg-white/20 rounded-full h-2 overflow-hidden">
-              <div 
-                className="bg-white h-full transition-all duration-500"
-                style={{ width: `${userData.nepqScore}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Widget ElevenLabs */}
-        {showElevenLabs && (
-          <div className="p-4 bg-gray-50 border-b">
-            <div className="bg-white rounded-lg p-4">
-              <elevenlabs-convai agent-id={CONFIG.AI_AGENT_ID}></elevenlabs-convai>
-              <Script 
-                src="https://elevenlabs.io/convai-widget/index.js" 
-                strategy="afterInteractive"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Zone de messages */}
-        <div className="h-96 overflow-y-auto p-4 bg-gray-50">
-          <div className="space-y-4">
-            {chatMessages.map((msg, index) => (
-              <div 
-                key={index}
-                className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`max-w-xs md:max-w-md px-4 py-3 rounded-2xl ${
-                  msg.type === 'user' 
-                    ? 'bg-blue-600 text-white rounded-br-none' 
-                    : 'bg-white text-gray-800 rounded-bl-none shadow'
-                }`}>
-                  <p className="text-sm md:text-base">{msg.text}</p>
-                </div>
-              </div>
-            ))}
-            
-            {aiTyping && (
-              <div className="flex justify-start">
-                <div className="bg-white px-4 py-3 rounded-2xl rounded-bl-none shadow">
-                  <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        {/* Zone d'input */}
-        <div className="p-4 bg-white border-t">
-          <form 
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleUserResponse(userInput);
-            }}
-            className="flex gap-2"
-          >
-            <input
-              type="text"
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              placeholder="Écris ta réponse ici..."
-              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-              autoFocus
-            />
-            <button
-              type="submit"
-              disabled={!userInput.trim() || aiTyping}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
-            >
-              <Send size={20} />
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ========== STAGE 3: DEEP CALCULATOR ==========
-const DeepCalculatorStage = ({ userData, setUserData, handleNextStage, trackEvent }) => {
-  const [animatedValues, setAnimatedValues] = useState({
-    daily: 0,
-    weekly: 0,
-    monthly: 0,
-    yearly: 0,
-    fiveYear: 0
-  });
-
-  useEffect(() => {
-    trackEvent('calculator_deep_viewed');
-    
-    // Animation des valeurs
-    const targets = {
-      daily: userData.dailyLoss,
-      weekly: userData.weeklyLoss,
-      monthly: userData.monthlyLoss,
-      yearly: userData.yearlyLoss,
-      fiveYear: userData.fiveYearLoss
-    };
-
-    const duration = 2000;
-    const steps = 60;
-    const interval = duration / steps;
-
-    let currentStep = 0;
-    const timer = setInterval(() => {
-      currentStep++;
-      const progress = currentStep / steps;
-      
-      setAnimatedValues({
-        daily: Math.round(targets.daily * progress),
-        weekly: Math.round(targets.weekly * progress),
-        monthly: Math.round(targets.monthly * progress),
-        yearly: Math.round(targets.yearly * progress),
-        fiveYear: Math.round(targets.fiveYear * progress)
-      });
-
-      if (currentStep >= steps) {
-        clearInterval(timer);
-      }
-    }, interval);
-
-    return () => clearInterval(timer);
-  }, [userData]);
-
-  return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl md:text-5xl font-black mb-4">
-          💰 La Vérité Sur Tes Pertes
-        </h1>
-        <p className="text-xl text-gray-600">
-          {userData.name}, prépare-toi...
-        </p>
-      </div>
-
-      {/* Résultats dramatiques */}
-      <div className="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-2xl shadow-xl p-8 mb-8">
-        <h2 className="text-3xl font-bold mb-8 text-center">
-          😱 Voici ce que tu perds VRAIMENT:
-        </h2>
-        
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          {[
-            { label: 'Par jour', value: animatedValues.daily, icon: '📅' },
-            { label: 'Par semaine', value: animatedValues.weekly, icon: '📆' },
-            { label: 'Par mois', value: animatedValues.monthly, icon: '📊' },
-            { label: 'Par année', value: animatedValues.yearly, icon: '📈' },
-            { label: 'Sur 5 ans', value: animatedValues.fiveYear, icon: '💸' }
-          ].map((metric, i) => (
-            <div key={i} className="text-center">
-              <div className="text-4xl mb-2">{metric.icon}</div>
-              <p className="text-sm opacity-80">{metric.label}</p>
-              <p className="text-3xl md:text-4xl font-black">
-                {metric.value.toLocaleString()}$
-              </p>
-            </div>
-          ))}
-        </div>
-        
-        <div className="bg-white/10 backdrop-blur rounded-lg p-6 text-center">
-          <p className="text-xl font-semibold">
-            💡 En {userData.roiWeeks} semaines, l'IA est PAYÉE
-          </p>
-        </div>
-      </div>
-
-      {/* CTA */}
-      <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-8 text-white text-center">
-        <h3 className="text-3xl font-bold mb-4">
-          Tu veux continuer à perdre {userData.dailyLoss}$/jour?
-        </h3>
-        <button
-          onClick={handleNextStage}
-          className="bg-white text-green-600 px-8 py-4 rounded-lg font-bold text-xl hover:scale-105 transition-transform"
-        >
-          Je veux arrêter l'hémorragie MAINTENANT →
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ========== STAGE 4: PROOF & DEMO ==========
-const ProofDemoStage = ({ userData, handleNextStage, trackEvent }) => {
-  const [selectedScenario, setSelectedScenario] = useState(null);
-
-  useEffect(() => {
-    trackEvent('proof_demo_viewed');
-  }, []);
-
-  const scenarios = [
-    {
-      id: 'budget',
-      title: 'Client avec budget serré',
-      prompt: "C'est trop cher pour moi",
-      response: "Je comprends votre budget. On a des options à partir de [PRIX]. Qu'est-ce qui serait dans votre budget?"
-    },
-    {
-      id: 'urgence',
-      title: 'Urgence haie malade',
-      prompt: "Ma haie est en train de mourir!",
-      response: "Je comprends l'urgence! On peut envoyer notre expert demain. Quelle est votre adresse?"
-    },
-    {
-      id: 'competition',
-      title: 'Compare les prix',
-      prompt: "Mon beau-frère le fait moins cher",
-      response: "C'est bien d'avoir des options! Nous, on est assurés et on garantit notre travail. C'est important pour vous?"
-    }
-  ];
-
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl md:text-5xl font-black mb-4">
-          🎯 L'IA Qui Parle Québécois
-        </h1>
-        <p className="text-xl text-gray-600">
-          Teste-la en direct. Sois impressionné.
-        </p>
-      </div>
-
-      {/* Widget ElevenLabs en évidence */}
-      <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-        <h2 className="text-2xl font-bold mb-6 text-center">
-          🎤 Parle DIRECTEMENT à l'IA - Maintenant!
-        </h2>
-        
-        <div className="bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl p-6 max-w-2xl mx-auto">
-          <elevenlabs-convai agent-id={CONFIG.AI_AGENT_ID}></elevenlabs-convai>
-          <Script 
-            src="https://elevenlabs.io/convai-widget/index.js" 
-            strategy="afterInteractive"
-          />
-        </div>
-        
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-2xl mx-auto">
-          <div className="bg-blue-50 p-3 rounded-lg text-sm text-center">
-            <p className="font-semibold">Essaie:</p>
-            <p>"Mes cèdres brunissent"</p>
-          </div>
-          <div className="bg-green-50 p-3 rounded-lg text-sm text-center">
-            <p className="font-semibold">Ou:</p>
-            <p>"C'est combien?"</p>
-          </div>
-          <div className="bg-yellow-50 p-3 rounded-lg text-sm text-center">
-            <p className="font-semibold">Ou:</p>
-            <p>"Vous venez à Laval?"</p>
-          </div>
-          <div className="bg-purple-50 p-3 rounded-lg text-sm text-center">
-            <p className="font-semibold">Ou:</p>
-            <p>"J'ai pas le budget"</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Scénarios */}
-      <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-        <h3 className="text-2xl font-bold mb-6 text-center">
-          🎯 Gestion des situations difficiles
-        </h3>
-        
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
-          {scenarios.map(scenario => (
-            <button
-              key={scenario.id}
-              onClick={() => {
-                setSelectedScenario(scenario);
-                trackEvent('scenario_selected', scenario.id);
-              }}
-              className={`p-6 rounded-xl border-2 text-left transition-all ${
-                selectedScenario?.id === scenario.id
-                  ? 'border-blue-600 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <h4 className="font-bold mb-2">{scenario.title}</h4>
-              <p className="text-sm text-gray-600">"{scenario.prompt}"</p>
-            </button>
-          ))}
-        </div>
-
-        {selectedScenario && (
-          <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6">
-            <h4 className="font-bold mb-3">Réponse de l'IA:</h4>
-            <p className="italic mb-4">"{selectedScenario.response}"</p>
-            <div className="text-green-600 font-semibold">
-              ✓ Gère la situation parfaitement
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* CTA */}
-      <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-8 text-white text-center">
-        <h3 className="text-3xl font-bold mb-4">
-          Convaincu? C'est le temps d'agir!
-        </h3>
-        <button
-          onClick={handleNextStage}
-          className="bg-white text-green-600 px-8 py-4 rounded-lg font-bold text-xl hover:scale-105 transition-transform"
-        >
-          Je veux mon IA maintenant →
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ========== STAGE 5: OFFER & CONTRACT ==========
-const OfferContractStage = ({ userData, setUserData, handleNextStage, trackEvent, countdown }) => {
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
-
-  useEffect(() => {
-    trackEvent('offer_contract_viewed');
-  }, []);
-
-  const bonuses = [
-    { name: "Scripts de Closing", value: 1500 },
-    { name: "Accès VIP Groupe des 5", value: 2000 },
-    { name: "Formation Pricing Power", value: 800 },
-    { name: "Updates prioritaires", value: 1200 }
-  ];
-
-  const totalBonusValue = bonuses.reduce((sum, bonus) => sum + bonus.value, 0);
-
-  return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Header avec urgence */}
-      <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-2xl p-6 mb-8 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold mb-2">
-          ⏰ Offre Limitée - {countdown.days}j {countdown.hours}h {countdown.minutes}m
-        </h1>
-        <p className="text-xl">
-          Prix actuel: {CONFIG.PRICE_NOW.toLocaleString()}$ 
-          (Bientôt: {CONFIG.PRICE_FUTURE.toLocaleString()}$)
-        </p>
-      </div>
-
-      {/* L'offre */}
-      <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-        <h2 className="text-3xl font-bold mb-6">
-          {userData.name}, voici TON offre personnalisée
-        </h2>
-        
-        {/* Rappel situation */}
-        <div className="bg-gray-50 rounded-xl p-6 mb-6">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-lg p-4">
-              <p className="text-sm text-gray-600">Pertes annuelles</p>
-              <p className="text-2xl font-bold text-red-600">{userData.yearlyLoss.toLocaleString()}$</p>
-            </div>
-            <div className="bg-white rounded-lg p-4">
-              <p className="text-sm text-gray-600">ROI avec l'IA</p>
-              <p className="text-2xl font-bold text-green-600">{userData.roiWeeks} semaines</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Prix */}
-        <div className="border-2 border-blue-600 rounded-xl p-6 mb-6">
-          <h3 className="text-2xl font-bold mb-4">
-            🤖 Ton IA Réceptionniste Personnalisée
-          </h3>
-          
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="font-semibold">Installation complète</span>
-              <span className="font-bold text-2xl">{CONFIG.PRICE_NOW.toLocaleString()}$</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="font-semibold">Maintenance mensuelle</span>
-              <span className="font-bold">{CONFIG.MONTHLY_FEE}$/mois</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bonus */}
-        <div className="bg-yellow-50 rounded-xl p-6 mb-6">
-          <h3 className="text-xl font-bold mb-4">
-            🎁 Bonus EXCLUSIFS (Valeur: {totalBonusValue.toLocaleString()}$)
-          </h3>
-          {bonuses.map((bonus, i) => (
-            <div key={i} className="flex justify-between items-center py-2">
-              <span>{bonus.name}</span>
-              <span className="font-bold text-green-600">{bonus.value}$</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Signature */}
-        <div className="bg-gray-50 rounded-lg p-6">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={agreedToTerms}
-              onChange={(e) => setAgreedToTerms(e.target.checked)}
-              className="mt-1"
-            />
-            <span>
-              J'accepte l'offre et je veux arrêter de perdre {userData.weeklyLoss.toLocaleString()}$/semaine
-            </span>
-          </label>
-        </div>
-
-        <button
-          onClick={() => {
-            if (agreedToTerms) {
-              setUserData(prev => ({ ...prev, contractSigned: true }));
-              handleNextStage();
-            }
-          }}
-          disabled={!agreedToTerms}
-          className={`w-full mt-6 py-4 rounded-lg font-bold text-lg transition-all ${
-            agreedToTerms
-              ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:scale-105'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
-        >
-          Procéder au paiement sécurisé →
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ========== STAGE 6: PAYMENT ==========
-const PaymentStage = ({ userData, setUserData, handleNextStage, trackEvent }) => {
-  const [processing, setProcessing] = useState(false);
-
-  useEffect(() => {
-    trackEvent('payment_stage_viewed');
-  }, []);
-
-  const handlePayment = async () => {
-    setProcessing(true);
-    trackEvent('payment_initiated', CONFIG.PRICE_NOW);
-
+  // Envoi SMS
+  const sendSMS = async (message: string, to?: string) => {
     try {
-      // Créer la session Stripe
-      const response = await fetch('/api/payments/create-checkout', {
+      const response = await fetch('/api/sms/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: CONFIG.PRICE_NOW,
-          userData: userData
+          to: to || userData.phone,
+          message
         })
-      });
-
-      const { url } = await response.json();
+      })
       
-      if (url) {
-        // Rediriger vers Stripe Checkout
-        window.location.href = url;
-      } else {
-        // Mode demo
-        setTimeout(() => {
-          setUserData(prev => ({ ...prev, paymentCompleted: true }));
-          trackEvent('payment_completed', CONFIG.PRICE_NOW);
-          handleNextStage();
-        }, 2000);
+      if (response.ok) {
+        const result = await response.json()
+        console.log('📱 SMS sent:', result)
+        return result
       }
     } catch (error) {
-      console.error('Payment error:', error);
-      setProcessing(false);
+      console.error('SMS error:', error)
     }
-  };
+    return null
+  }
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-2xl shadow-xl p-8">
-        <h2 className="text-3xl font-bold mb-8 text-center">
-          💳 Finalise ton investissement
-        </h2>
-
-        {/* Résumé */}
-        <div className="bg-gray-50 rounded-lg p-6 mb-6">
-          <h3 className="font-bold mb-4">Résumé:</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>IA Réceptionniste</span>
-              <span className="font-bold">{CONFIG.PRICE_NOW.toLocaleString()}$</span>
-            </div>
-            <div className="flex justify-between text-green-600">
-              <span>Bonus exclusifs</span>
-              <span>GRATUIT</span>
-            </div>
-            <div className="border-t pt-2 flex justify-between font-bold text-lg">
-              <span>Total</span>
-              <span>{CONFIG.PRICE_NOW.toLocaleString()}$</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bouton paiement */}
-        {!processing ? (
-          <button
-            onClick={handlePayment}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-lg font-bold text-lg hover:scale-105 transition-transform"
-          >
-            Payer de façon sécurisée →
-          </button>
-        ) : (
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p>Traitement en cours...</p>
-          </div>
-        )}
-
-        {/* Sécurité */}
-        <div className="flex items-center justify-center gap-6 mt-6 text-sm text-gray-600">
-          <div className="flex items-center gap-2">
-            <Lock size={16} />
-            <span>SSL 256-bit</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Shield size={16} />
-            <span>Paiement sécurisé</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ========== STAGE 7: BOOKING ==========
-const BookingStage = ({ userData, setUserData, handleNextStage, trackEvent }) => {
+  // Effets
   useEffect(() => {
-    trackEvent('booking_stage_viewed');
-  }, []);
+    trackEvent('page_view_landing')
+    
+    // Mise à jour des stats live
+    const statsInterval = setInterval(() => {
+      setLiveStats(prev => ({
+        activeVisitors: prev.activeVisitors + Math.floor(Math.random() * 10 - 5),
+        callsAnswered: prev.callsAnswered + Math.floor(Math.random() * 50),
+        moneySaved: prev.moneySaved + Math.floor(Math.random() * 10000),
+        lastSignup: `${Math.floor(Math.random() * 10 + 1)} minutes`
+      }))
+    }, CONFIG.LIVE_UPDATE_INTERVAL)
+    
+    // Countdown
+    const countdownInterval = setInterval(() => {
+      setCountdown(prev => Math.max(0, prev - 1))
+    }, 1000)
+    
+    return () => {
+      clearInterval(statsInterval)
+      clearInterval(countdownInterval)
+    }
+  }, [])
+
+  // Mise à jour des pertes quand les paramètres changent
+  useEffect(() => {
+    const losses = calculateLosses(userData.missedCalls, userData.avgPrice)
+    setUserData(prev => ({ ...prev, ...losses }))
+  }, [userData.missedCalls, userData.avgPrice])
+
+  // Rendu des stages
+  const renderStage = () => {
+    const stageProps: StageProps = {
+      navigateToStage,
+      userData,
+      setUserData,
+      trackEvent,
+      liveStats,
+      countdown,
+      chatMessages,
+      setChatMessages,
+      aiTyping,
+      setAiTyping,
+      sendSMS
+    }
+
+    switch (currentStage) {
+      case 'landing':
+        return <LandingStage {...stageProps} />
+      case 'ai-qualification':
+        return <AIQualificationStage {...stageProps} />
+      case 'deep-calculator':
+        return <DeepCalculatorStage {...stageProps} />
+      case 'proof-demo':
+        return <ProofDemoStage {...stageProps} />
+      case 'offer-contract':
+        return <OfferContractStage {...stageProps} />
+      case 'payment':
+        return <PaymentStage {...stageProps} />
+      case 'booking':
+        return <BookingStage {...stageProps} />
+      case 'welcome-vip':
+        return <WelcomeVIPStage {...stageProps} />
+      default:
+        return <LandingStage {...stageProps} />
+    }
+  }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-green-500 to-green-600 p-8 text-white text-center">
-          <Trophy className="mx-auto mb-4" size={64} />
-          <h1 className="text-3xl font-bold mb-2">
-            🎊 Félicitations {userData.name}!
-          </h1>
-          <p className="text-xl">
-            Tu fais partie des 5 pionniers!
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      {renderStage()}
+    </div>
+  )
+}
+// Composant AnimatedMoney
+const AnimatedMoney: React.FC<{ value: number }> = ({ value }) => {
+ const [displayValue, setDisplayValue] = useState(0)
+ 
+ useEffect(() => {
+   const duration = 1000
+   const steps = 30
+   const increment = value / steps
+   let current = 0
+   
+   const timer = setInterval(() => {
+     current += increment
+     if (current >= value) {
+       setDisplayValue(value)
+       clearInterval(timer)
+     } else {
+       setDisplayValue(Math.round(current))
+     }
+   }, duration / steps)
+   
+   return () => clearInterval(timer)
+ }, [value])
+ 
+ return <span>{displayValue.toLocaleString()}</span>
+}
+
+// Stage 1: Landing
+const LandingStage: React.FC<StageProps> = ({ 
+ navigateToStage, 
+ userData, 
+ setUserData, 
+ trackEvent, 
+ liveStats, 
+ countdown 
+}) => {
+ const [showDemo, setShowDemo] = useState(false)
+ const [quickCalcDone, setQuickCalcDone] = useState(false)
+
+ return (
+   <div className="max-w-6xl mx-auto px-4 py-8">
+     {/* Hero Section */}
+     <section className="mb-12">
+       <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl p-8 md:p-12 overflow-hidden relative">
+         {/* Background pattern */}
+         <div className="absolute inset-0 opacity-5">
+           <div className="absolute inset-0" style={{
+             backgroundImage: `repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 1px, transparent 15px)`,
+           }} />
+         </div>
+         
+         {/* Badge d'autorité */}
+         <div className="text-center mb-8 relative z-10">
+           <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full font-bold text-sm md:text-base animate-pulse">
+             <Trophy size={20} />
+             <span>PREMIER AU QUÉBEC • {CONFIG.SPOTS_TAKEN} CLIENTS ACTIFS</span>
+             <Trophy size={20} />
+           </div>
+         </div>
+
+         {/* Titre principal */}
+         <div className="text-center mb-10 relative z-10">
+           <h1 className="text-4xl md:text-6xl font-black mb-6 leading-tight">
+             Tu Perds{' '}
+             <span className="text-red-600 relative">
+               <AnimatedMoney value={userData.weeklyLoss} />$/Semaine
+               <span className="absolute -bottom-2 left-0 right-0 h-3 bg-red-200 opacity-30 transform skew-x-12"></span>
+             </span>
+             <br />
+             en Appels Manqués
+           </h1>
+           
+           {/* Stat Harvard */}
+           <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4 md:p-6 max-w-3xl mx-auto animate-bounce-slow">
+             <p className="text-lg md:text-2xl text-gray-800">
+               <span className="font-bold">Harvard Business Review:</span> Répondre en 1 minute = 
+               <span className="text-green-600 font-black text-2xl md:text-3xl"> 21X</span> plus de chances de convertir
+             </p>
+             <p className="text-sm md:text-base text-gray-600 mt-2">
+               Après 5 minutes? <span className="text-red-600 font-bold">-400% de conversion</span>
+             </p>
+           </div>
+         </div>
+
+         {/* CTA Principal */}
+         <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 md:p-8 text-white mb-8 transform hover:scale-105 transition-all duration-300">
+           <h3 className="text-2xl md:text-3xl font-bold mb-4 text-center flex items-center justify-center gap-3">
+             <MessageSquare className="animate-bounce" size={32} />
+             Parle avec Sophie (IA) - Elle calcule TES pertes exactes
+           </h3>
+           <button
+             onClick={() => {
+               navigateToStage('ai-qualification')
+               trackEvent('start_ai_chat_hero', 1)
+             }}
+             className="w-full bg-white text-green-600 py-4 rounded-lg font-bold text-xl hover:shadow-xl transition-all"
+           >
+             Commencer la conversation maintenant →
+           </button>
+           <p className="text-center text-sm mt-3 flex items-center justify-center gap-2">
+             <Sparkles size={16} />
+             89% des gens qui testent l'IA deviennent clients en 24h
+           </p>
+         </div>
+
+         {/* Quick Calculator */}
+         <QuickCalculatorHero 
+           userData={userData} 
+           setUserData={setUserData}
+           onComplete={() => setQuickCalcDone(true)}
+           trackEvent={trackEvent}
+         />
+       </div>
+     </section>
+
+     {/* Stats Grid */}
+     <section className="mb-12">
+       <h2 className="text-3xl font-bold text-center mb-8">
+         📊 Les Chiffres Qui Font Mal (Mais Qui Vont Te Motiver)
+       </h2>
+       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+         {Object.entries(KILLER_STATS).slice(0, 8).map(([key, stat]: [string, any]) => (
+           <div 
+             key={key}
+             className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+           >
+             <p className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+               {stat.value}
+             </p>
+             <p className="text-sm text-gray-600 mt-2">{stat.desc}</p>
+           </div>
+         ))}
+       </div>
+       
+       {/* Message percutant */}
+       <div className="text-center mt-8 p-6 bg-red-50 rounded-xl">
+         <p className="text-xl font-bold text-red-900">
+           💸 Pendant que tu lis ça, tu viens de perdre{' '}
+           <AnimatedMoney value={Math.round(userData.dailyLoss / 24 / 60)} />$ 
+         </p>
+         <p className="text-gray-700 mt-2">
+           (Basé sur tes {userData.missedCalls} appels manqués/semaine à {userData.avgPrice}$/contrat)
+         </p>
+       </div>
+     </section>
+
+     {/* Démo IA */}
+     <section className="mb-12">
+       <DemoSection 
+         showDemo={showDemo}
+         setShowDemo={setShowDemo}
+         trackEvent={trackEvent}
+       />
+     </section>
+
+     {/* Plus de sections... */}
+     <TestimonialsSection />
+     <UrgencySection liveStats={liveStats} countdown={countdown} />
+     
+     {/* CTA Final */}
+     <section className="text-center py-12">
+       <div className="bg-gradient-to-r from-red-600 to-orange-600 rounded-2xl p-8 text-white">
+         <h2 className="text-3xl font-bold mb-4">
+           ⏰ Les {CONFIG.SPOTS_TOTAL - CONFIG.SPOTS_TAKEN} Dernières Places Partent VITE
+         </h2>
+         <p className="text-xl mb-6">
+           Ne laisse pas ton concurrent prendre TA place
+         </p>
+         <button
+           onClick={() => {
+             navigateToStage('ai-qualification')
+             trackEvent('final_cta_clicked')
+           }}
+           className="bg-white text-red-600 px-8 py-4 rounded-full font-bold text-xl hover:shadow-xl transform hover:scale-105 transition-all inline-flex items-center"
+         >
+           Réserver Ma Place Maintenant <ArrowRight className="ml-2" />
+         </button>
+       </div>
+     </section>
+   </div>
+ )
+}
+
+// Quick Calculator Component
+const QuickCalculatorHero: React.FC<{
+ userData: UserData
+ setUserData: (data: any) => void
+ onComplete: () => void
+ trackEvent: (event: string, value?: any) => void
+}> = ({ userData, setUserData, onComplete, trackEvent }) => {
+ const [step, setStep] = useState(1)
+
+ return (
+   <div className="bg-white rounded-xl p-6 shadow-lg">
+     <h3 className="text-xl font-bold mb-4">
+       🧮 Calcul Rapide (30 secondes)
+     </h3>
+     
+     {step === 1 && (
+       <div>
+         <p className="mb-4">Combien d'appels tu manques par semaine?</p>
+         <input
+           type="range"
+           min="1"
+           max="20"
+           value={userData.missedCalls}
+           onChange={(e) => setUserData({ ...userData, missedCalls: parseInt(e.target.value) })}
+           className="w-full mb-2"
+         />
+         <p className="text-center text-2xl font-bold mb-4">{userData.missedCalls} appels</p>
+         <button
+           onClick={() => setStep(2)}
+           className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold"
+         >
+           Suivant →
+         </button>
+       </div>
+     )}
+     
+     {step === 2 && (
+       <div>
+         <p className="mb-4">Valeur moyenne d'un contrat?</p>
+         <div className="grid grid-cols-3 gap-2 mb-4">
+           {[400, 600, 800, 1000, 1500, 2000].map(price => (
+             <button
+               key={price}
+               onClick={() => {
+                 setUserData({ ...userData, avgPrice: price })
+                 setStep(3)
+                 onComplete()
+                 trackEvent('quick_calc_completed', price)
+               }}
+               className="bg-gray-100 hover:bg-blue-100 py-2 rounded font-bold transition-colors"
+             >
+               {price}$
+             </button>
+           ))}
+         </div>
+       </div>
+     )}
+     
+     {step === 3 && (
+       <div className="text-center animate-bounce-in">
+         <p className="text-3xl font-bold text-red-600">
+           Tu perds {userData.weeklyLoss}$/semaine!
+         </p>
+         <p className="text-gray-600 mt-2">
+           Soit {userData.yearlyLoss}$/année 😱
+         </p>
+       </div>
+     )}
+   </div>
+ )
+}
+// Demo Section
+const DemoSection: React.FC<{
+ showDemo: boolean
+ setShowDemo: (show: boolean) => void
+ trackEvent: (event: string, value?: any) => void
+}> = ({ showDemo, setShowDemo, trackEvent }) => {
+ return (
+   <div className="bg-white rounded-2xl shadow-xl p-8">
+     <h2 className="text-3xl font-bold mb-6 text-center">
+       🎤 Teste l'IA LIVE - Pose N'importe Quelle Question!
+     </h2>
+     
+     <div className="text-center mb-8">
+       <p className="text-lg text-gray-600 mb-4">
+         L'IA comprend le québécois, répond en 2 secondes, gère toutes les situations
+       </p>
+     </div>
+
+     {!showDemo ? (
+       <div className="max-w-2xl mx-auto">
+         <button
+           onClick={() => {
+             setShowDemo(true)
+             trackEvent('demo_activated')
+           }}
+           className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-6 rounded-xl font-bold text-xl hover:scale-105 transition-transform flex items-center justify-center gap-3 shadow-lg"
+         >
+           <Headphones className="animate-pulse" size={32} />
+           Activer la démo vocale maintenant
+         </button>
+         
+         <p className="text-center text-sm text-gray-600 mt-4">
+           ⚡ Aucune installation requise • Fonctionne sur tous les appareils
+         </p>
+       </div>
+     ) : (
+       <div className="max-w-3xl mx-auto">
+         {/* Widget de démo vocale */}
+         <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 shadow-inner">
+           <div className="bg-white rounded-lg p-8">
+             <elevenlabs-convai agent-id={CONFIG.AI_AGENT_OUTBOUND}></elevenlabs-convai>
+             <Script src="https://elevenlabs.io/convai-widget/index.js" />
+           </div>
+         </div>
+         
+         {/* Performance metrics */}
+         <div className="grid grid-cols-3 gap-4 mt-6">
+           <div className="text-center">
+             <p className="text-2xl font-bold text-green-600">2.1s</p>
+             <p className="text-sm text-gray-600">Temps de réponse</p>
+           </div>
+           <div className="text-center">
+             <p className="text-2xl font-bold text-blue-600">98%</p>
+             <p className="text-sm text-gray-600">Compréhension</p>
+           </div>
+           <div className="text-center">
+             <p className="text-2xl font-bold text-purple-600">24/7</p>
+             <p className="text-sm text-gray-600">Disponible</p>
+           </div>
+         </div>
+       </div>
+     )}
+   </div>
+ )
+}
+
+// Testimonials Section
+const TestimonialsSection: React.FC = () => {
+ const testimonials = [
+   {
+     name: "Marc Tremblay",
+     company: "Émondage Pro",
+     image: "👨‍💼",
+     text: "J'ai récupéré 3,200$/semaine! L'IA répond même le dimanche matin.",
+     stars: 5
+   },
+   {
+     name: "Sophie Gagnon",
+     company: "Paysagement SG",
+     image: "👩‍💼",
+     text: "Plus jamais d'appels manqués. ROI en 2 semaines, c'est fou!",
+     stars: 5
+   },
+   {
+     name: "Pierre Dubois",
+     company: "Taillage Expert",
+     image: "👨‍💼",
+     text: "L'installation en 30 jours, support A1. Je recommande à 100%.",
+     stars: 5
+   }
+ ]
+
+ return (
+   <section className="py-12">
+     <h2 className="text-3xl font-bold text-center mb-8">
+       ⭐ Ils Récupèrent Déjà des Milliers $/Semaine
+     </h2>
+     <div className="grid md:grid-cols-3 gap-6">
+       {testimonials.map((testimonial, i) => (
+         <div key={i} className="bg-white rounded-xl shadow-lg p-6">
+           <div className="flex items-center mb-4">
+             <div className="text-4xl mr-4">{testimonial.image}</div>
+             <div>
+               <h3 className="font-bold">{testimonial.name}</h3>
+               <p className="text-sm text-gray-600">{testimonial.company}</p>
+             </div>
+           </div>
+           <div className="flex mb-3">
+             {[...Array(testimonial.stars)].map((_, i) => (
+               <Star key={i} size={20} className="text-yellow-400 fill-current" />
+             ))}
+           </div>
+           <p className="text-gray-700">"{testimonial.text}"</p>
+         </div>
+       ))}
+     </div>
+   </section>
+ )
+}
+
+// Urgency Section
+const UrgencySection: React.FC<{ liveStats: any; countdown: number }> = ({ liveStats, countdown }) => {
+ const hours = Math.floor(countdown / 3600)
+ const minutes = Math.floor((countdown % 3600) / 60)
+ const seconds = countdown % 60
+
+ return (
+   <section className="py-12">
+     <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-8 text-white">
+       <h2 className="text-3xl font-bold text-center mb-6">
+         ⚡ Activité en Temps Réel
+       </h2>
+       
+       <div className="grid md:grid-cols-3 gap-6 mb-8">
+         <div className="text-center">
+           <p className="text-4xl font-bold">{liveStats.activeVisitors}</p>
+           <p>Visiteurs actifs</p>
+         </div>
+         <div className="text-center">
+           <p className="text-4xl font-bold">{liveStats.callsAnswered.toLocaleString()}</p>
+           <p>Appels répondus ce mois</p>
+         </div>
+         <div className="text-center">
+           <p className="text-4xl font-bold">${(liveStats.moneySaved / 1000).toFixed(0)}K</p>
+           <p>Économisés pour nos clients</p>
+         </div>
+       </div>
+       
+       <div className="text-center">
+         <p className="text-xl mb-4">🔥 Dernière inscription: il y a {liveStats.lastSignup}</p>
+         <div className="bg-white/20 rounded-lg p-4 inline-block">
+           <p className="text-2xl font-bold">
+             {String(hours).padStart(2, '0')}:
+             {String(minutes).padStart(2, '0')}:
+             {String(seconds).padStart(2, '0')}
+           </p>
+           <p className="text-sm">avant la fin de l'offre</p>
+         </div>
+       </div>
+     </div>
+   </section>
+ )
+}
+
+// Stage 2: AI Qualification
+const AIQualificationStage: React.FC<StageProps> = ({
+ navigateToStage,
+ userData,
+ setUserData,
+ trackEvent,
+ chatMessages,
+ setChatMessages,
+ aiTyping,
+ setAiTyping
+}) => {
+ const [currentQuestion, setCurrentQuestion] = useState(0)
+ const [userInput, setUserInput] = useState('')
+ const chatEndRef = useRef<HTMLDivElement>(null)
+
+ const questions = [
+   {
+     ai: "Salut! 👋 Je suis Sophie, l'IA experte en récupération d'appels manqués. C'est quoi ton prénom?",
+     field: 'name',
+     validation: (value: string) => value.length > 1
+   },
+   {
+     ai: (name: string) => `Enchanté ${name}! 🎯 Quel est le nom de ton entreprise?`,
+     field: 'company',
+     validation: (value: string) => value.length > 2
+   },
+   {
+     ai: "Super! 📞 Maintenant la question qui fait mal... Combien d'appels tu manques par semaine environ?",
+     field: 'missedCalls',
+     type: 'number',
+     validation: (value: string) => parseInt(value) > 0
+   },
+   {
+     ai: "Aïe! 💸 Et c'est quoi la valeur moyenne d'un de tes contrats?",
+     field: 'avgPrice',
+     type: 'number',
+     validation: (value: string) => parseInt(value) > 0
+   },
+   {
+     ai: (name: string, loss: number) => `OMG ${name}! 😱 Tu perds ${loss}$/semaine! C'est urgent de régler ça?`,
+     field: 'urgency',
+     options: ['Très urgent!', 'Assez urgent', 'Je regarde mes options'],
+     validation: (value: string) => value.length > 0
+   },
+   {
+     ai: "Dernière question! 💪 T'es le/la boss qui peut dire OUI aujourd'hui?",
+     field: 'decisionMaker',
+     options: ['Oui, c\'est moi!', 'Je dois consulter'],
+     validation: (value: string) => value.length > 0
+   }
+ ]
+
+ useEffect(() => {
+   // Message initial
+   if (chatMessages?.length === 0) {
+     setTimeout(() => {
+       setChatMessages?.([{
+         type: 'ai',
+         text: questions[0].ai,
+         timestamp: new Date()
+       }])
+     }, 500)
+   }
+ }, [])
+
+ useEffect(() => {
+   chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+ }, [chatMessages])
+
+ const handleSubmit = async (e?: React.FormEvent) => {
+   e?.preventDefault()
+   
+   const question = questions[currentQuestion]
+   let value = userInput
+
+   // Validation
+   if (!question.validation(value)) {
+     return
+   }
+
+   // Ajouter message utilisateur
+   setChatMessages?.([
+     ...(chatMessages || []),
+     {
+       type: 'user',
+       text: value,
+       timestamp: new Date()
+     }
+   ])
+
+   // Mettre à jour les données
+   const updates: any = { [question.field]: value }
+   
+   // Traitement spécial pour certains champs
+   if (question.field === 'missedCalls') {
+     updates.missedCalls = parseInt(value)
+   } else if (question.field === 'avgPrice') {
+     updates.avgPrice = parseInt(value)
+     const losses = calculateLosses(userData.missedCalls, parseInt(value))
+     Object.assign(updates, losses)
+   } else if (question.field === 'urgency') {
+     updates.urgency = value === 'Très urgent!' ? 'urgent' : value === 'Assez urgent' ? 'soon' : 'exploring'
+   } else if (question.field === 'decisionMaker') {
+     updates.decisionMaker = value === 'Oui, c\'est moi!'
+   }
+
+   setUserData({ ...userData, ...updates })
+   setUserInput('')
+
+   // Typing animation
+   setAiTyping?.(true)
+   
+   setTimeout(() => {
+     setAiTyping?.(false)
+     
+     if (currentQuestion < questions.length - 1) {
+       // Prochaine question
+       const nextQuestion = questions[currentQuestion + 1]
+       let aiMessage = ''
+       
+       if (typeof nextQuestion.ai === 'function') {
+         aiMessage = nextQuestion.ai(userData.name, userData.weeklyLoss)
+       } else {
+         aiMessage = nextQuestion.ai
+       }
+       
+       setChatMessages?.([
+         ...(chatMessages || []),
+         {
+           type: 'user',
+           text: value,
+           timestamp: new Date()
+         },
+         {
+           type: 'ai',
+           text: aiMessage,
+           timestamp: new Date()
+         }
+       ])
+       
+       setCurrentQuestion(currentQuestion + 1)
+     } else {
+       // Qualification terminée
+       const nepqScore = calculateNEPQScore(userData)
+       setUserData({ ...userData, ...updates, nepqScore })
+       
+       trackEvent('ai_qualification_completed', nepqScore, {
+         weeklyLoss: userData.weeklyLoss,
+         urgency: updates.urgency
+       })
+       
+       // Message final
+       setChatMessages?.([
+         ...(chatMessages || []),
+         {
+           type: 'user',
+           text: value,
+           timestamp: new Date()
+         },
+         {
+           type: 'ai',
+           text: `Parfait ${userData.name}! 🎯 J'ai tout ce qu'il me faut. Ton score de qualification est de ${nepqScore}/100. Je te montre maintenant EXACTEMENT comment on va récupérer tes ${userData.weeklyLoss}$/semaine...`,
+           timestamp: new Date()
+         }
+       ])
+       
+       setTimeout(() => {
+         navigateToStage('deep-calculator')
+       }, 3000)
+     }
+   }, 1500)
+ }
+
+ const calculateLosses = (missedCalls: number, avgPrice: number) => {
+   const conversionRate = 0.3
+   const dailyLoss = Math.round((missedCalls / 5) * avgPrice * conversionRate)
+   const weeklyLoss = Math.round(missedCalls * avgPrice * conversionRate)
+   const monthlyLoss = Math.round(weeklyLoss * 4.33)
+   const yearlyLoss = Math.round(weeklyLoss * 52)
+   const fiveYearLoss = yearlyLoss * 5
+   
+   return { dailyLoss, weeklyLoss, monthlyLoss, yearlyLoss, fiveYearLoss }
+ }
+
+ const calculateNEPQScore = (data: any) => {
+   let score = 0
+   
+   // Pertes financières (40 points max)
+   if (data.weeklyLoss > 3000) score += 40
+   else if (data.weeklyLoss > 2000) score += 30
+   else if (data.weeklyLoss > 1000) score += 20
+   else if (data.weeklyLoss > 500) score += 10
+   
+   // Urgence (30 points max)
+   if (data.urgency === 'urgent') score += 30
+   else if (data.urgency === 'soon') score += 20
+   else if (data.urgency === 'exploring') score += 10
+   
+   // Décideur (30 points max)
+   if (data.decisionMaker) score += 30
+   
+   return score
+ }
+
+ const currentQ = questions[currentQuestion]
+
+ return (
+   <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 py-8">
+     <div className="max-w-3xl mx-auto px-4">
+       {/* Header */}
+       <div className="text-center mb-8">
+         <div className="inline-flex items-center bg-white rounded-full px-6 py-3 shadow-lg mb-4">
+           <Bot className="text-purple-600 mr-2" size={24} />
+           <span className="font-bold text-gray-800">Sophie • IA Qualificatrice</span>
+         </div>
+         <div className="text-sm text-gray-600">
+           Question {currentQuestion + 1} sur {questions.length}
+         </div>
+       </div>
+
+       {/* Chat container */}
+       <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 h-[500px] overflow-y-auto">
+         <div className="space-y-4">
+           {chatMessages?.map((message, index) => (
+             <div
+               key={index}
+               className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+             >
+               <div
+                 className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                   message.type === 'user'
+                     ? 'bg-blue-600 text-white'
+                     : 'bg-gray-100 text-gray-800'
+                 }`}
+               >
+                 {message.text}
+               </div>
+             </div>
+           ))}
+           
+           {aiTyping && (
+             <div className="flex justify-start">
+               <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                 <div className="flex space-x-2">
+                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                 </div>
+               </div>
+             </div>
+           )}
+           
+           <div ref={chatEndRef} />
+         </div>
+       </div>
+
+       {/* Input form */}
+       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg p-4">
+         {currentQ.options ? (
+           <div className="grid grid-cols-2 gap-3">
+             {currentQ.options.map((option, i) => (
+               <button
+                 key={i}
+                 type="button"
+                 onClick={() => {
+                   setUserInput(option)
+                   handleSubmit()
+                 }}
+                 className="bg-purple-100 hover:bg-purple-200 text-purple-800 py-3 px-4 rounded-lg font-medium transition-colors"
+               >
+                 {option}
+               </button>
+             ))}
+           </div>
+         ) : (
+           <div className="flex gap-3">
+             <input
+               type={currentQ.type || 'text'}
+               value={userInput}
+               onChange={(e) => setUserInput(e.target.value)}
+               placeholder="Ta réponse..."
+               className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+               autoFocus
+             />
+             <button
+               type="submit"
+               disabled={!userInput}
+               className="bg-purple-600 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors"
+             >
+               <Send size={20} />
+             </button>
+           </div>
+         )}
+       </form>
+     </div>
+   </div>
+ )
+}
+// Stage 3: Deep Calculator
+const DeepCalculatorStage: React.FC<StageProps> = ({
+  navigateToStage,
+  userData,
+  trackEvent
+}) => {
+  useEffect(() => {
+    trackEvent('deep_calculator_viewed', userData.weeklyLoss)
+  }, [])
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Header alarmant */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center bg-red-600 text-white rounded-full px-6 py-3 shadow-lg animate-pulse">
+            <AlertCircle className="mr-2" size={24} />
+            <span className="font-bold">ALERTE FINANCIÈRE CRITIQUE</span>
+          </div>
         </div>
 
-        <div className="p-8">
-          <h2 className="text-2xl font-bold mb-6 text-center">
-            📅 Réserve ton appel d'onboarding (45 min)
-          </h2>
+        {/* Résultats principaux */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+          <h1 className="text-3xl font-bold text-center mb-8">
+            {userData.name}, voici la vérité qui fait mal...
+          </h1>
 
-          {/* Iframe Calendly */}
-          <div className="mb-6">
-            <iframe
-              src={CONFIG.CALENDLY_URL}
-              width="100%"
-              height="600"
-              frameBorder="0"
-              className="rounded-lg"
-            ></iframe>
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            <div className="bg-red-50 rounded-xl p-6 border-2 border-red-200">
+              <h3 className="text-xl font-bold text-red-800 mb-4">
+                💸 Pertes Actuelles
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span>Par jour:</span>
+                  <span className="font-bold text-red-600">{userData.dailyLoss}$</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Par semaine:</span>
+                  <span className="font-bold text-red-600">{userData.weeklyLoss}$</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Par mois:</span>
+                  <span className="font-bold text-red-600">{userData.monthlyLoss}$</span>
+                </div>
+                <div className="flex justify-between text-lg">
+                  <span>Par année:</span>
+                  <span className="font-black text-red-600">{userData.yearlyLoss}$</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-green-50 rounded-xl p-6 border-2 border-green-200">
+              <h3 className="text-xl font-bold text-green-800 mb-4">
+                💰 Avec Sophie l'IA (Projection)
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span>Appels manqués:</span>
+                  <span className="font-bold text-green-600">0</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Temps de réponse:</span>
+                  <span className="font-bold text-green-600">0.3 secondes</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Revenue récupéré:</span>
+                  <span className="font-bold text-green-600">+{userData.weeklyLoss}$/sem</span>
+                </div>
+                <div className="flex justify-between text-lg">
+                  <span>ROI annuel:</span>
+                  <span className="font-black text-green-600">+{userData.yearlyLoss}$</span>
+                </div>
+              </div>
+            </div>
           </div>
 
+          {/* Message Jean-Samuel style */}
+          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-6 mb-6">
+            <p className="text-lg font-bold text-center mb-2">
+              🚨 {userData.name}, ta business est comme un seau troué!
+            </p>
+            <p className="text-center">
+              Pendant que tu soupes avec ta famille, {userData.weeklyLoss}$ s'en vont direct dans les poches de ton compétiteur.
+              <br />
+              <span className="font-bold">78% des clients vont avec le premier qui répond!</span>
+            </p>
+          </div>
+
+          {/* Graph visuel des pertes */}
+          <div className="bg-gray-900 rounded-xl p-6 text-white">
+            <h3 className="text-xl font-bold mb-4">📊 Valeur perdue sur 10 ans</h3>
+            <div className="h-64 flex items-end justify-around">
+              {[1, 2, 3, 5, 10].map(year => (
+                <div key={year} className="text-center">
+                  <div 
+                    className="bg-red-500 w-16 mx-auto rounded-t"
+                    style={{ height: `${Math.min(year * 20, 200)}px` }}
+                  />
+                  <p className="mt-2 text-sm">{year} ans</p>
+                  <p className="font-bold">{(userData.yearlyLoss * year).toLocaleString()}$</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-center mt-4 text-2xl font-bold">
+              Valeur d'entreprise perdue: <span className="text-red-400">{(userData.yearlyLoss * 5).toLocaleString()}$</span> 
+            </p>
+            <p className="text-center text-sm mt-2">
+              (Une business se vend 5x le profit annuel)
+            </p>
+          </div>
+        </div>
+
+        {/* CTA urgent */}
+        <div className="text-center">
           <button
             onClick={() => {
-              setUserData(prev => ({ ...prev, bookingDate: 'Confirmé' }));
-              handleNextStage();
+              trackEvent('proceed_to_demo', userData.weeklyLoss)
+              navigateToStage('proof-demo')
             }}
-            className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-blue-700"
+            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-full font-bold text-xl shadow-xl hover:scale-105 transform transition-all inline-flex items-center"
           >
-            J'ai réservé mon appel →
+            Je veux récupérer mes {userData.weeklyLoss}$/semaine <ArrowRight className="ml-2" />
           </button>
+          <p className="text-sm text-gray-600 mt-4">
+            👇 Découvre comment Sophie va sauver tes appels en 0.3 secondes
+          </p>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-// ========== STAGE 8: WELCOME VIP ==========
-const WelcomeVIPStage = ({ userData, trackEvent }) => {
-  useEffect(() => {
-    trackEvent('welcome_vip_reached');
-  }, []);
+// Stage 4: Proof & Demo
+const ProofDemoStage: React.FC<StageProps> = ({
+  navigateToStage,
+  userData,
+  trackEvent
+}) => {
+  const [demoActive, setDemoActive] = useState(false)
+  const [selectedTestCase, setSelectedTestCase] = useState('')
+
+  const testCases = [
+    { id: 'ginette', label: '👵 Ginette 80 ans', desc: 'Répète 10 fois' },
+    { id: 'stephane', label: '🤓 Stéphane analytique', desc: 'Veut tout savoir' },
+    { id: 'ahmed', label: '💰 Ahmed négociateur', desc: 'Veut -50%' },
+    { id: 'urgent', label: '🚨 Job urgente', desc: 'Besoin maintenant' }
+  ]
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl p-8 mb-8 text-center">
-        <h1 className="text-4xl md:text-5xl font-black mb-4">
-          🏆 Bienvenue dans l'Élite!
-        </h1>
-        <p className="text-2xl">
-          {userData.name}, tu es le membre #{CONFIG.SPOTS_TAKEN + 1} du Club des 5
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-8">
+      <div className="max-w-5xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-4">
+            🎯 Sophie - L'IA Qui Connaît L'encyclopédie Des Haies Par Cœur
+          </h1>
+          <p className="text-xl text-gray-600">
+            Elle répond en québécois, en 0.3 secondes, 24/7
+          </p>
+        </div>
 
-      <div className="bg-white rounded-2xl shadow-xl p-8">
-        <h2 className="text-2xl font-bold mb-6">📚 Tes ressources VIP</h2>
-        
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-gray-50 rounded-lg p-6">
-            <Gift className="text-purple-600 mb-3" size={32} />
-            <h3 className="font-bold mb-2">Bonus exclusifs</h3>
-            <p className="text-gray-600">Scripts, formations, accès VIP</p>
-          </div>
-          
-          <div className="bg-gray-50 rounded-lg p-6">
-            <MessageSquare className="text-green-600 mb-3" size={32} />
-            <h3 className="font-bold mb-2">WhatsApp direct</h3>
-            <p className="text-gray-600">Support 24/7 avec Jean-Samuel</p>
-          </div>
-          
-          <div className="bg-gray-50 rounded-lg p-6">
-            <Calendar className="text-blue-600 mb-3" size={32} />
-            <h3 className="font-bold mb-2">Onboarding confirmé</h3>
-            <p className="text-gray-600">{userData.bookingDate || 'À venir'}</p>
-          </div>
-          
-          <div className="bg-gray-50 rounded-lg p-6">
-            <Rocket className="text-orange-600 mb-3" size={32} />
-            <h3 className="font-bold mb-2">Lancement dans 30 jours</h3>
-            <p className="text-gray-600">Installation garantie</p>
+        {/* Histoire Jean-Samuel */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+          <h2 className="text-2xl font-bold mb-6">
+            🌳 Pourquoi j'ai créé Sophie pour les tailleurs de haies?
+          </h2>
+          <div className="space-y-4 text-lg">
+            <p>
+              <span className="font-bold">J'suis Jean-Samuel.</span> J'ai fait du taillage de haies pendant 4 ans.
+              J'ai déjà vendu 2,000$ de job en une heure en porte-à-porte.
+            </p>
+            <p>
+              Aujourd'hui j'ai 4 cliniques vétérinaires, 1 compagnie de comptabilité, 50 portes en immobilier.
+            </p>
+            <p className="bg-green-50 p-4 rounded-lg">
+              <span className="font-bold">Mon chum que j'ai mentoré de zéro?</span> 
+              <br />Il fait maintenant 400,000$/saison avec 4 employés!
+            </p>
+            <p>
+              <span className="font-bold">Mes racines viennent du taillage.</span> J'aime les tailleurs de haies.
+              On est du monde d'action, des fonceurs. Pas des cols blancs qui prennent 40 ans pour agir.
+            </p>
           </div>
         </div>
 
-        <div className="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 text-center">
-          <p className="text-lg font-semibold">
-            💎 Tu viens de sauver {userData.yearlyLoss.toLocaleString()}$/année!
-          </p>
-          <p className="text-gray-600 mt-2">
-            ROI prévu: {userData.roiWeeks} semaines
+        {/* Demo IA */}
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl shadow-xl p-8 mb-8 text-white">
+          <h2 className="text-2xl font-bold text-center mb-6">
+            🔥 TESTE SOPHIE LIVE - Elle Gère TOUS Les Types de Clients!
+          </h2>
+
+          {/* Options de test */}
+          <div className="grid md:grid-cols-4 gap-3 mb-6">
+            {testCases.map(test => (
+              <button
+                key={test.id}
+                onClick={() => {
+                  setSelectedTestCase(test.id)
+                  trackEvent('demo_test_selected', test.id)
+                }}
+                className={`p-3 rounded-lg font-medium transition-all ${
+                  selectedTestCase === test.id
+                    ? 'bg-white text-purple-600'
+                    : 'bg-white/20 hover:bg-white/30'
+                }`}
+              >
+                <div className="text-lg">{test.label}</div>
+                <div className="text-xs opacity-80">{test.desc}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Widget IA */}
+          {!demoActive ? (
+            <div className="text-center">
+              <button
+                onClick={() => {
+                  setDemoActive(true)
+                  trackEvent('demo_activated_proof')
+                }}
+                className="bg-white text-purple-600 px-8 py-4 rounded-full font-bold text-xl hover:scale-105 transform transition-all inline-flex items-center"
+              >
+                <Phone className="mr-2" size={24} />
+                Appeler Sophie: {CONFIG.AI_PHONE}
+              </button>
+              <p className="mt-4 text-sm">
+                Ou utilise le widget ci-dessous pour parler directement
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl p-6">
+              <elevenlabs-convai agent-id={CONFIG.AI_AGENT_CLOSER}></elevenlabs-convai>
+            </div>
+          )}
+
+          {/* Ce que Sophie fait */}
+          <div className="mt-8 bg-white/10 rounded-xl p-6">
+            <h3 className="text-xl font-bold mb-4">✨ Sophie en action:</h3>
+            <ul className="space-y-2">
+              <li>✅ Connaît toutes les techniques de vente par cœur</li>
+              <li>✅ Fait une soumission basée sur tes prix au pied carré</li>
+              <li>✅ Book direct dans ton agenda avec toutes les infos</li>
+              <li>✅ S'adapte au profil psychologique du client</li>
+              <li>✅ Close avec les meilleures techniques de persuasion</li>
+              <li>✅ Envoie une notification avec tous les détails</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Garantie Jean-Samuel */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+          <h2 className="text-2xl font-bold text-center mb-6">
+            🛡️ Ma Garantie Personnelle
+          </h2>
+          <div className="bg-red-50 border-2 border-red-400 rounded-xl p-6 text-center">
+            <p className="text-xl font-bold mb-4">
+              "Si t'as pas refait ton argent cette saison..."
+            </p>
+            <p className="text-lg">
+              Je prends mon cul pi mon char, pis je vais closer tes jobs en porte-à-porte pour toi!
+            </p>
+            <p className="text-sm mt-4 font-bold">
+              C'est écrit dans le contrat. Je te garantis le ROI.
+            </p>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="text-center">
+          <button
+            onClick={() => {
+              trackEvent('proceed_to_offer', userData.nepqScore)
+              navigateToStage('offer-contract')
+            }}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-full font-bold text-xl shadow-xl hover:scale-105 transform transition-all inline-flex items-center"
+          >
+            Je veux Sophie pour ma business <ArrowRight className="ml-2" />
+          </button>
+          <p className="text-sm text-gray-600 mt-4">
+            ⏰ J'en prends juste 5 cette saison - 3 places restantes
           </p>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
+// Stage 5: Offer & Contract
+const OfferContractStage: React.FC<StageProps> = ({
+ navigateToStage,
+ userData,
+ trackEvent
+}) => {
+ const [contractAccepted, setContractAccepted] = useState(false)
+ const [initials, setInitials] = useState('')
+
+ const handleAcceptContract = () => {
+   if (!initials || initials.length < 2) {
+     alert('Veuillez entrer vos initiales')
+     return
+   }
+   
+   setContractAccepted(true)
+   trackEvent('contract_accepted', 5000, {
+     nepqScore: userData.nepqScore,
+     weeklyLoss: userData.weeklyLoss
+   })
+   
+   setTimeout(() => {
+     navigateToStage('payment')
+   }, 2000)
+ }
+
+ return (
+   <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 py-8">
+     <div className="max-w-4xl mx-auto px-4">
+       {/* Header VIP */}
+       <div className="text-center mb-8">
+         <div className="inline-flex items-center bg-gradient-to-r from-yellow-600 to-yellow-500 text-white rounded-full px-6 py-3 shadow-lg">
+           <Trophy className="mr-2" size={24} />
+           <span className="font-bold">OFFRE EXCLUSIVE - 3 PLACES RESTANTES SUR 5</span>
+         </div>
+       </div>
+
+       {/* L'offre principale */}
+       <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+         <h1 className="text-3xl font-bold text-center mb-8">
+           Sophie - Ta Réceptionniste IA À Vie
+         </h1>
+
+         {/* Comparaison */}
+         <div className="bg-gray-100 rounded-xl p-6 mb-8">
+           <h3 className="text-xl font-bold mb-4 text-center">
+             💰 Compare avec une réceptionniste humaine:
+           </h3>
+           <div className="grid md:grid-cols-2 gap-6">
+             <div className="bg-red-50 rounded-lg p-4">
+               <h4 className="font-bold text-red-800 mb-3">❌ Humain (50,000$/an)</h4>
+               <ul className="space-y-2 text-sm">
+                 <li>• Congés maladie</li>
+                 <li>• Vacances</li>
+                 <li>• Erreurs humaines</li>
+                 <li>• 40h/semaine max</li>
+                 <li>• Formation longue</li>
+                 <li>• Caprices</li>
+               </ul>
+             </div>
+             <div className="bg-green-50 rounded-lg p-4">
+               <h4 className="font-bold text-green-800 mb-3">✅ Sophie IA (5,000$ à vie)</h4>
+               <ul className="space-y-2 text-sm">
+                 <li>• Jamais malade</li>
+                 <li>• 24/7/365</li>
+                 <li>• 0.3 sec de réponse</li>
+                 <li>• Clients illimités</li>
+                 <li>• S'améliore seule</li>
+                 <li>• Close tout</li>
+               </ul>
+             </div>
+           </div>
+         </div>
+
+         {/* Ce qui est inclus */}
+         <div className="space-y-6 mb-8">
+           <h3 className="font-bold text-xl mb-3">🎁 TOUT CE QUE T'AS AVEC SOPHIE:</h3>
+           
+           <div className="space-y-4">
+             <div className="flex items-start">
+               <Check className="text-green-600 mr-3 mt-1" size={24} />
+               <div>
+                 <p className="font-bold">Sophie personnalisée pour {userData.company}</p>
+                 <p className="text-sm text-gray-600">Connaît tes prix, services, territoire</p>
+               </div>
+             </div>
+             
+             <div className="flex items-start">
+               <Check className="text-green-600 mr-3 mt-1" size={24} />
+               <div>
+                 <p className="font-bold">Script de vente à 2,000$/heure</p>
+                 <p className="text-sm text-gray-600">Le même que j'utilisais en porte-à-porte</p>
+               </div>
+             </div>
+             
+             <div className="flex items-start">
+               <Check className="text-green-600 mr-3 mt-1" size={24} />
+               <div>
+                 <p className="font-bold">Blueprint pour atteindre 1M$ de chiffre d'affaires</p>
+                 <p className="text-sm text-gray-600">Mon système complet étape par étape</p>
+               </div>
+             </div>
+             
+             <div className="flex items-start">
+               <Check className="text-green-600 mr-3 mt-1" size={24} />
+               <div>
+                 <p className="font-bold">Mon numéro de cell pour du coaching SMS</p>
+                 <p className="text-sm text-gray-600">Je réponds en 24h max</p>
+               </div>
+             </div>
+             
+             <div className="flex items-start">
+               <Check className="text-green-600 mr-3 mt-1" size={24} />
+               <div>
+                 <p className="font-bold">Automatisation sondage satisfaction</p>
+                 <p className="text-sm text-gray-600">10/10 = demande Google review + références</p>
+               </div>
+             </div>
+             
+             <div className="flex items-start">
+               <Check className="text-green-600 mr-3 mt-1" size={24} />
+               <div>
+                 <p className="font-bold">Installation en max 4 semaines</p>
+                 <p className="text-sm text-gray-600">100+ heures de développement custom</p>
+               </div>
+             </div>
+           </div>
+         </div>
+
+         {/* Pricing */}
+         <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-8 text-white mb-8">
+           <div className="text-center">
+             <p className="text-lg mb-2">Prix régulier</p>
+             <div className="text-5xl font-bold mb-4">
+               <span className="line-through opacity-50">10,000$</span>
+               <span className="ml-4">5,000$</span>
+             </div>
+             <p className="text-xl mb-6">+ 100$/mois (4h de réceptionniste)</p>
+             
+             <div className="bg-white/20 rounded-lg p-4 mb-6">
+               <p className="font-bold text-lg">⏰ OFFRE 24H SEULEMENT:</p>
+               <p className="text-2xl font-bold">50% DE RABAIS = 5,000$ au lieu de 10,000$</p>
+             </div>
+             
+             <p className="text-2xl font-bold">
+               💰 ROI: Tu récupères {userData.weeklyLoss}$/semaine
+             </p>
+             <p className="text-lg">
+               = {Math.round(5000 / userData.weeklyLoss)} semaines pour être rentable!
+             </p>
+           </div>
+         </div>
+
+         {/* Calcul Jean-Samuel */}
+         <div className="bg-blue-50 rounded-xl p-6 mb-8">
+           <h3 className="font-bold text-lg mb-3">🧮 Le calcul de Jean-Samuel:</h3>
+           <p className="mb-3">
+             "Écoute, avec 5,000$ tu vas faire {userData.yearlyLoss * 10}$ sur 10 ans.
+           </p>
+           <p className="font-bold text-xl text-center">
+             Trouve-moi un meilleur rendement que ça!
+           </p>
+         </div>
+
+         {/* Contract */}
+         <div className="bg-gray-100 rounded-xl p-6">
+           <h3 className="font-bold text-lg mb-4">📝 Contrat Simple (2 minutes)</h3>
+           
+           <div className="bg-white rounded-lg p-4 mb-4 text-sm space-y-2">
+             <p><strong>Parties:</strong> {userData.company} et AI Réceptionniste Inc. (Jean-Samuel Leboeuf)</p>
+             <p><strong>Service:</strong> Sophie - IA réceptionniste 24/7 à vie</p>
+             <p><strong>Installation:</strong> Maximum 4 semaines</p>
+             <p><strong>Support:</strong> Illimité, SMS direct avec Jean-Samuel</p>
+             <p><strong>Garantie:</strong> ROI ou je viens closer en personne</p>
+             <p><strong>Prix:</strong> 5,000$ installation + 100$/mois</p>
+           </div>
+           
+           <div className="space-y-4">
+             <div>
+               <label className="block text-sm font-medium mb-2">
+                 Entrez vos initiales pour accepter:
+               </label>
+               <input
+                 type="text"
+                 value={initials}
+                 onChange={(e) => setInitials(e.target.value.toUpperCase())}
+                 placeholder="Ex: JD"
+                 className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                 maxLength={4}
+               />
+             </div>
+             
+             <button
+               onClick={handleAcceptContract}
+               disabled={!initials || initials.length < 2}
+               className="w-full bg-green-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+             >
+               {contractAccepted ? (
+                 <span className="flex items-center justify-center">
+                   <CheckCircle className="mr-2" /> Contrat accepté! Redirection...
+                 </span>
+               ) : (
+                 'J\'accepte et je deviens ACTION (pas suiveux)'
+               )}
+             </button>
+           </div>
+         </div>
+       </div>
+     </div>
+   </div>
+ )
+}
+
+// Stage 6: Payment
+const PaymentStage: React.FC<StageProps> = ({
+ navigateToStage,
+ userData,
+ trackEvent
+}) => {
+ const [paymentProcessing, setPaymentProcessing] = useState(false)
+
+ const handlePayment = () => {
+   setPaymentProcessing(true)
+   trackEvent('payment_initiated', 5000)
+   
+   // Redirection vers Stripe
+   setTimeout(() => {
+     window.location.href = CONFIG.STRIPE_LINK
+   }, 1000)
+ }
+
+ return (
+   <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 py-8">
+     <div className="max-w-3xl mx-auto px-4">
+       {/* Sécurité */}
+       <div className="text-center mb-8">
+         <div className="inline-flex items-center bg-green-600 text-white rounded-full px-6 py-3 shadow-lg">
+           <Lock className="mr-2" size={20} />
+           <span className="font-bold">PAIEMENT 100% SÉCURISÉ</span>
+         </div>
+       </div>
+
+       {/* Message Jean-Samuel */}
+       <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-6 mb-8">
+         <p className="text-lg font-bold text-center">
+           "C'est tellement malade qu'avec tout ce que je viens de t'expliquer, 
+           à ce prix-là, c'est pas moi qui va te supplier d'accepter!"
+         </p>
+         <p className="text-center mt-2">- Jean-Samuel</p>
+       </div>
+
+       {/* Résumé de commande */}
+       <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+         <h1 className="text-2xl font-bold mb-6">Finalise ta commande</h1>
+         
+         <div className="border-2 border-green-200 rounded-lg p-6 mb-6">
+           <h3 className="font-bold text-lg mb-4">📋 Résumé pour {userData.company}</h3>
+           
+           <div className="space-y-3">
+             <div className="flex justify-between">
+               <span>Sophie IA à vie (valeur 10,000$)</span>
+               <span className="font-bold">5,000$</span>
+             </div>
+             <div className="flex justify-between">
+               <span>Abonnement mensuel</span>
+               <span className="font-bold">100$/mois</span>
+             </div>
+             <div className="flex justify-between text-green-600">
+               <span>🎁 Script 2,000$/h</span>
+               <span className="font-bold">INCLUS</span>
+             </div>
+             <div className="flex justify-between text-green-600">
+               <span>🎁 Blueprint 1M$</span>
+               <span className="font-bold">INCLUS</span>
+             </div>
+             <div className="flex justify-between text-green-600">
+               <span>🎁 Coaching SMS</span>
+               <span className="font-bold">INCLUS</span>
+             </div>
+             
+             <div className="border-t pt-3 mt-3">
+               <div className="flex justify-between text-xl font-bold">
+                 <span>Total aujourd'hui:</span>
+                 <span>5,000$</span>
+               </div>
+               <p className="text-sm text-gray-600 mt-1">
+                 Prochain paiement: 100$ dans 1 mois
+               </p>
+             </div>
+           </div>
+         </div>
+
+         {/* ROI Calculator */}
+         <div className="bg-green-50 rounded-lg p-6 mb-6">
+           <h3 className="font-bold mb-3">💰 Ton ROI Projeté</h3>
+           <div className="space-y-2 text-sm">
+             <div className="flex justify-between">
+               <span>Revenue récupéré/semaine:</span>
+               <span className="font-bold text-green-600">+{userData.weeklyLoss}$</span>
+             </div>
+             <div className="flex justify-between">
+               <span>Coût/semaine:</span>
+               <span className="font-bold">-25$</span>
+             </div>
+             <div className="flex justify-between text-lg font-bold text-green-600">
+               <span>Profit NET/semaine:</span>
+               <span>+{userData.weeklyLoss - 25}$</span>
+             </div>
+           </div>
+           <p className="text-center mt-4 text-lg font-bold">
+             🚀 Rentabilisé en {Math.round(5000 / (userData.weeklyLoss - 25))} semaines!
+           </p>
+         </div>
+
+         {/* Payment button */}
+         <button
+           onClick={handlePayment}
+           disabled={paymentProcessing}
+           className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-lg font-bold text-xl hover:scale-105 transform transition-all disabled:opacity-50"
+         >
+           {paymentProcessing ? (
+             <span className="flex items-center justify-center">
+               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
+               Redirection vers paiement sécurisé...
+             </span>
+           ) : (
+             <span className="flex items-center justify-center">
+               <CreditCard className="mr-3" />
+               ACTION - Payer 5,000$ maintenant
+             </span>
+           )}
+         </button>
+         
+         <div className="flex items-center justify-center mt-4 text-sm text-gray-600">
+           <Lock size={16} className="mr-2" />
+           Paiement crypté SSL • Stripe certifié PCI
+         </div>
+       </div>
+
+       {/* Urgency */}
+       <div className="text-center">
+         <div className="bg-red-100 border-2 border-red-300 rounded-lg p-4">
+           <p className="font-bold text-red-800">
+             ⚠️ ATTENTION: J'en prends juste 5 cette saison
+           </p>
+           <p className="text-sm text-red-600 mt-1">
+             3 places restantes - Ton compétiteur est peut-être en train de payer...
+           </p>
+         </div>
+       </div>
+     </div>
+   </div>
+ )
+}
+
+// Stage 7: Booking
+const BookingStage: React.FC<StageProps> = ({
+ navigateToStage,
+ userData,
+ trackEvent
+}) => {
+ const [bookingCompleted, setBookingCompleted] = useState(false)
+
+ const handleBooking = () => {
+   setBookingCompleted(true)
+   trackEvent('onboarding_booked')
+   
+   // Ouvrir Calendly
+   window.open(CONFIG.CALENDLY_URL, '_blank')
+   
+   setTimeout(() => {
+     navigateToStage('welcome-vip')
+   }, 2000)
+ }
+
+ return (
+   <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8">
+     <div className="max-w-4xl mx-auto px-4">
+       <div className="text-center mb-8">
+         <div className="inline-flex items-center bg-blue-600 text-white rounded-full px-6 py-3 shadow-lg">
+           <Calendar className="mr-2" size={20} />
+           <span className="font-bold">RÉSERVE TON INSTALLATION VIP</span>
+         </div>
+       </div>
+
+       <div className="bg-white rounded-2xl shadow-xl p-8">
+         <h1 className="text-3xl font-bold text-center mb-8">
+           🎉 Let's go {userData.name}!
+         </h1>
+         
+         <div className="bg-green-50 border-2 border-green-200 rounded-xl p-6 mb-8">
+           <p className="text-center text-lg font-bold">
+             T'es maintenant dans le club des ACTION, pas des suiveux!
+           </p>
+           <p className="text-center mt-2">
+             Sophie va être prête dans max 4 semaines
+           </p>
+         </div>
+
+         <div className="mb-8">
+           <h2 className="text-xl font-bold mb-6">📅 Prochaines étapes:</h2>
+           
+           <div className="space-y-4">
+             <div className="flex items-start">
+               <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 flex-shrink-0">
+                 1
+               </div>
+               <div>
+                 <h3 className="font-bold">Call d'installation (30 min)</h3>
+                 <p className="text-gray-600">On configure Sophie ensemble</p>
+               </div>
+             </div>
+             
+             <div className="flex items-start">
+               <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 flex-shrink-0">
+                 2
+               </div>
+               <div>
+                 <h3 className="font-bold">Je code Sophie sur mesure</h3>
+                 <p className="text-gray-600">100+ heures de développement pour {userData.company}</p>
+               </div>
+             </div>
+             
+             <div className="flex items-start">
+               <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 flex-shrink-0">
+                 3
+               </div>
+               <div>
+                 <h3 className="font-bold">Sophie commence à closer! 💰</h3>
+                 <p className="text-gray-600">Tu reçois des notifications de jobs bookées</p>
+               </div>
+             </div>
+           </div>
+         </div>
+
+         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-6 text-white text-center">
+           <h3 className="text-xl font-bold mb-4">
+             ⏰ Choisis ton créneau maintenant
+           </h3>
+           <p className="mb-6">
+             Plus vite on se parle, plus vite Sophie récupère tes {userData.weeklyLoss}$/semaine!
+           </p>
+           
+           <button
+             onClick={handleBooking}
+             className="bg-white text-blue-600 px-8 py-4 rounded-lg font-bold text-lg hover:scale-105 transform transition-all"
+           >
+             {bookingCompleted ? (
+               <span className="flex items-center justify-center">
+                 <CheckCircle className="mr-2" /> Calendrier ouvert!
+               </span>
+             ) : (
+               <span className="flex items-center justify-center">
+                 <Calendar className="mr-2" /> Réserver mon installation
+               </span>
+             )}
+           </button>
+         </div>
+       </div>
+     </div>
+   </div>
+ )
+}
+
+// Stage 8: Welcome VIP
+const WelcomeVIPStage: React.FC<StageProps> = ({
+ userData,
+ trackEvent,
+ sendSMS
+}) => {
+ useEffect(() => {
+   trackEvent('funnel_completed', userData.yearlyLoss, {
+     company: userData.company,
+     nepqScore: userData.nepqScore
+   })
+   
+   // Send welcome SMS
+   sendSMS?.(
+     `🎉 Let's go ${userData.name}! Sophie va être prête dans max 4 semaines. Tu vas récupérer ${userData.weeklyLoss}$/semaine! P.S. Texte ACTION au 450-280-3222 si t'as des questions - Jean-Samuel`,
+     userData.phone
+   )
+ }, [])
+
+ return (
+   <div className="min-h-screen bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center py-8">
+     <div className="max-w-4xl mx-auto px-4 text-white text-center">
+       <div className="mb-8">
+         <Trophy size={80} className="mx-auto mb-6 animate-bounce" />
+         <h1 className="text-5xl font-bold mb-4">
+           Bienvenue dans le Club des ACTION! 🎉
+         </h1>
+       </div>
+
+       <div className="bg-white/20 backdrop-blur rounded-2xl p-8 mb-8">
+         <h2 className="text-2xl font-bold mb-6">
+           {userData.name}, t'es maintenant un fonceur, pas un suiveux!
+         </h2>
+         
+         <div className="grid md:grid-cols-3 gap-6 mb-8">
+           <div>
+             <Rocket size={48} className="mx-auto mb-3" />
+             <h3 className="font-bold mb-2">Dans 24-48h</h3>
+             <p>Call avec Jean-Samuel ou son équipe</p>
+           </div>
+           <div>
+             <Brain size={48} className="mx-auto mb-3" />
+             <h3 className="font-bold mb-2">Dans 2-3 semaines</h3>
+             <p>Sophie en test privé pour toi</p>
+           </div>
+           <div>
+             <DollarSign size={48} className="mx-auto mb-3" />
+             <h3 className="font-bold mb-2">Dans 4 semaines</h3>
+             <p>+{userData.weeklyLoss}$/semaine garantis!</p>
+           </div>
+         </div>
+         
+         <div className="bg-white/20 rounded-lg p-6">
+           <h3 className="text-xl font-bold mb-3">📱 Contact Direct</h3>
+           <p className="mb-2">SMS Jean-Samuel: 450-280-3222</p>
+           <p className="mb-2">Email: support@sophieai.ca</p>
+           <p>Texte "ACTION" pour toute question!</p>
+         </div>
+       </div>
+
+       <div className="space-y-4">
+         <p className="text-xl">
+           💌 Check tes courriels - toutes les infos arrivent!
+         </p>
+         <p className="text-lg opacity-80">
+           P.S. T'as pris la meilleure décision pour ta business. 
+           <br />
+           Pendant que tes compétiteurs dorment, Sophie va closer! 
+         </p>
+       </div>
+     </div>
+   </div>
+ )
+}
