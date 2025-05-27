@@ -1,6 +1,6 @@
-'use client'
+&apos;use client&apos;
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from &apos;react&apos;
 import {
   Phone, DollarSign, Clock, Check, AlertCircle, Shield,
   Building2, Calculator, ChevronRight, CreditCard, Lock,
@@ -9,16 +9,16 @@ import {
   Sparkles, Trophy, FileText, Send, Eye, Brain,
   CheckCircle, X, Mic, MicOff, Download, ExternalLink,
   Gift, Rocket, Heart, ThumbsUp, Bell
-} from 'lucide-react'
+} from &apos;lucide-react&apos;
 
 // Configuration centrale
 const CONFIG = {
-  STRIPE_PAYMENT_LINK: 'https://book.stripe.com/9B6aEX5XI1Rn9uJg3R6c007',
-  HEYGEN_VIDEO_ID: '7d66ab95a1c04a57817a97d426cb9303',
-  SMS_FROM_NUMBER: '+14389004385',
-  GA_ID: 'G-BYDHGJR1F9',
-  FB_PIXEL_ID: '490629836',
-  BUSINESS_NAME: 'Jean-Samuel Leboeuf',
+  STRIPE_PAYMENT_LINK: &apos;https://book.stripe.com/9B6aEX5XI1Rn9uJg3R6c007&apos;,
+  HEYGEN_VIDEO_ID: &apos;7d66ab95a1c04a57817a97d426cb9303&apos;,
+  SMS_FROM_NUMBER: &apos;+14389004385&apos;,
+  GA_ID: &apos;G-BYDHGJR1F9&apos;,
+  FB_PIXEL_ID: &apos;490629836&apos;,
+  BUSINESS_NAME: &apos;Jean-Samuel Leboeuf&apos;,
 }
 
 // Types
@@ -43,8 +43,8 @@ interface UserData {
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      'elevenlabs-convai': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
-        'agent-id': string;
+      &apos;elevenlabs-convai&apos;: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+        &apos;agent-id&apos;: string;
       }, HTMLElement>;
     }
   }
@@ -53,16 +53,16 @@ declare global {
 export default function UltimateAIFunnel() {
   const [userData, setUserData] = useState<UserData>({
     stage: 1,
-    name: '',
-    phone: '',
-    businessName: '',
-    currentReceptionist: '',
+    name: &apos;&apos;,
+    phone: &apos;&apos;,
+    businessName: &apos;&apos;,
+    currentReceptionist: &apos;&apos;,
     missedCallsPerWeek: 0,
     averageJobValue: 0,
     weeklyLoss: 0,
-    urgency: '',
-    budget: '',
-    timeline: '',
+    urgency: &apos;&apos;,
+    budget: &apos;&apos;,
+    timeline: &apos;&apos;,
     decisionMaker: false,
     nepqScore: 0,
     paymentCompleted: false,
@@ -71,22 +71,22 @@ export default function UltimateAIFunnel() {
   const [isLoading, setIsLoading] = useState(false)
   const [showContract, setShowContract] = useState(false)
   const [contractAccepted, setContractAccepted] = useState(false)
-  const [signature, setSignature] = useState('')
-  const [phoneError, setPhoneError] = useState('')
+  const [signature, setSignature] = useState(&apos;&apos;)
+  const [phoneError, setPhoneError] = useState(&apos;&apos;)
   const [showVIPContent, setShowVIPContent] = useState(false)
 
   // Fonctions utilitaires
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('fr-CA', {
-      style: 'currency',
-      currency: 'CAD',
+    return new Intl.NumberFormat(&apos;fr-CA&apos;, {
+      style: &apos;currency&apos;,
+      currency: &apos;CAD&apos;,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount)
   }
 
   const formatPhoneNumber = (phone: string): string => {
-    const cleaned = phone.replace(/\D/g, '')
+    const cleaned = phone.replace(/\D/g, &apos;&apos;)
     if (cleaned.length === 10) {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`
     }
@@ -94,46 +94,46 @@ export default function UltimateAIFunnel() {
   }
 
   const trackEvent = (eventName: string, eventData: any = {}) => {
-    console.log('📊 Event:', eventName, eventData)
+    console.log(&apos;📊 Event:&apos;, eventName, eventData)
     
     // Google Analytics
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', eventName, eventData)
+    if (typeof window !== &apos;undefined&apos; && (window as any).gtag) {
+      (window as any).gtag(&apos;event&apos;, eventName, eventData)
     }
     
     // Facebook Pixel
-    if (typeof window !== 'undefined' && (window as any).fbq) {
-      (window as any).fbq('track', eventName, eventData)
+    if (typeof window !== &apos;undefined&apos; && (window as any).fbq) {
+      (window as any).fbq(&apos;track&apos;, eventName, eventData)
     }
   }
 
   const sendSMS = async (toNumber: string, message: string) => {
     try {
-      const response = await fetch('/api/send-sms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch(&apos;/api/send-sms&apos;, {
+        method: &apos;POST&apos;,
+        headers: { &apos;Content-Type&apos;: &apos;application/json&apos; },
         body: JSON.stringify({ to: toNumber, message }),
       })
       
       if (!response.ok) {
-        throw new Error('SMS sending failed')
+        throw new Error(&apos;SMS sending failed&apos;)
       }
       
       const result = await response.json()
-      console.log('📱 SMS sent:', result)
+      console.log(&apos;📱 SMS sent:&apos;, result)
       return result
     } catch (error) {
-      console.error('❌ SMS Error:', error)
+      console.error(&apos;❌ SMS Error:&apos;, error)
       return null
     }
   }
 
   useEffect(() => {
-    trackEvent('page_view', { page: 'ai_funnel_landing' })
+    trackEvent(&apos;page_view&apos;, { page: &apos;ai_funnel_landing&apos; })
     
     // Load ElevenLabs script
-    const script = document.createElement('script')
-    script.src = 'https://elevenlabs.io/convai-widget/index.js'
+    const script = document.createElement(&apos;script&apos;)
+    script.src = &apos;https://elevenlabs.io/convai-widget/index.js&apos;
     script.async = true
     document.body.appendChild(script)
     
@@ -149,7 +149,7 @@ export default function UltimateAIFunnel() {
   const nextStage = () => {
     const newStage = userData.stage + 1
     updateUserData({ stage: newStage })
-    trackEvent('stage_progress', { 
+    trackEvent(&apos;stage_progress&apos;, { 
       from_stage: userData.stage, 
       to_stage: newStage,
       user_name: userData.name,
@@ -168,22 +168,22 @@ export default function UltimateAIFunnel() {
     else if (userData.weeklyLoss > 1500) score += 20
     else if (userData.weeklyLoss > 500) score += 10
 
-    if (userData.urgency === 'urgent') score += 20
-    else if (userData.urgency === 'soon') score += 10
+    if (userData.urgency === &apos;urgent&apos;) score += 20
+    else if (userData.urgency === &apos;soon&apos;) score += 10
 
-    if (userData.budget === 'ready') score += 20
-    else if (userData.budget === 'planned') score += 10
+    if (userData.budget === &apos;ready&apos;) score += 20
+    else if (userData.budget === &apos;planned&apos;) score += 10
 
     return score
   }
 
   const handlePhoneSubmit = () => {
-    const cleanPhone = userData.phone.replace(/\D/g, '')
+    const cleanPhone = userData.phone.replace(/\D/g, &apos;&apos;)
     if (cleanPhone.length !== 10) {
-      setPhoneError('Numéro invalide. Format: (514) 123-4567')
+      setPhoneError(&apos;Numéro invalide. Format: (514) 123-4567&apos;)
       return
     }
-    setPhoneError('')
+    setPhoneError(&apos;&apos;)
     nextStage()
   }
 
@@ -191,7 +191,7 @@ export default function UltimateAIFunnel() {
     const score = calculateNEPQScore()
     updateUserData({ nepqScore: score })
     
-    trackEvent('qualification_complete', {
+    trackEvent(&apos;qualification_complete&apos;, {
       nepq_score: score,
       weekly_loss: userData.weeklyLoss,
       urgency: userData.urgency,
@@ -205,10 +205,10 @@ export default function UltimateAIFunnel() {
     }
 
     // Facebook Pixel Lead Event
-    if (typeof window !== 'undefined' && (window as any).fbq) {
-      (window as any).fbq('track', 'Lead', {
+    if (typeof window !== &apos;undefined&apos; && (window as any).fbq) {
+      (window as any).fbq(&apos;track&apos;, &apos;Lead&apos;, {
         value: userData.weeklyLoss * 4,
-        currency: 'CAD'
+        currency: &apos;CAD&apos;
       })
     }
 
@@ -217,11 +217,11 @@ export default function UltimateAIFunnel() {
 
   const handleContractSign = () => {
     if (!signature.trim()) {
-      alert('Veuillez signer le contrat')
+      alert(&apos;Veuillez signer le contrat&apos;)
       return
     }
     setContractAccepted(true)
-    trackEvent('contract_signed', {
+    trackEvent(&apos;contract_signed&apos;, {
       signature: signature,
       nepq_score: userData.nepqScore
     })
@@ -230,14 +230,14 @@ export default function UltimateAIFunnel() {
   }
 
   const handlePaymentClick = () => {
-    trackEvent('payment_initiated', {
+    trackEvent(&apos;payment_initiated&apos;, {
       amount: 5000,
       weekly_loss: userData.weeklyLoss,
       nepq_score: userData.nepqScore
     })
     
     // Redirection vers Stripe avec metadata
-    const stripeUrl = `${CONFIG.STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(userData.phone + '@client.taillagedehaies.ai')}&client_reference_id=${userData.phone}`
+    const stripeUrl = `${CONFIG.STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(userData.phone + &apos;@client.taillagedehaies.ai&apos;)}&client_reference_id=${userData.phone}`
     window.location.href = stripeUrl
   }
 
@@ -247,7 +247,7 @@ export default function UltimateAIFunnel() {
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full opacity-20 blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full opacity-20 blur-3xl animate-pulse" style={{animationDelay: '0.7s'}}></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full opacity-20 blur-3xl animate-pulse" style={{animationDelay: &apos;0.7s&apos;}}></div>
       </div>
 
       <div className="container mx-auto px-4 py-12 relative z-10">
@@ -272,12 +272,12 @@ export default function UltimateAIFunnel() {
           {/* Urgency banner */}
           <div className="inline-flex items-center bg-red-500/20 border border-red-500/50 rounded-full px-6 py-2 mb-8 animate-pulse">
             <AlertCircle className="w-5 h-5 mr-2" />
-            <span className="font-semibold">Tu perds de l'argent MAINTENANT</span>
+            <span className="font-semibold">Tu perds de l&apos;argent MAINTENANT</span>
           </div>
 
           {/* Headline */}
           <h1 className="text-4xl md:text-6xl font-black mb-6 leading-tight">
-            Combien d'Appels Tu <span className="text-red-400">PERDS</span> Chaque Semaine?
+            Combien d&apos;Appels Tu <span className="text-red-400">PERDS</span> Chaque Semaine?
           </h1>
 
           {/* Subheadline */}
@@ -426,14 +426,14 @@ export default function UltimateAIFunnel() {
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
             <h3 className="text-xl font-bold mb-4">Qui répond présentement à tes appels?</h3>
             <div className="grid gap-3">
-              {['Moi-même', 'Ma conjointe', 'Un(e) employé(e)', 'Service de réponse', 'Personne'].map((option) => (
+              {[&apos;Moi-même&apos;, &apos;Ma conjointe&apos;, &apos;Un(e) employé(e)&apos;, &apos;Service de réponse&apos;, &apos;Personne&apos;].map((option) => (
                 <button
                   key={option}
                   onClick={() => updateUserData({ currentReceptionist: option })}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     userData.currentReceptionist === option
-                      ? 'bg-blue-600 border-blue-400'
-                      : 'bg-white/10 border-white/20 hover:border-blue-400'
+                      ? &apos;bg-blue-600 border-blue-400&apos;
+                      : &apos;bg-white/10 border-white/20 hover:border-blue-400&apos;
                   }`}
                 >
                   {option}
@@ -445,7 +445,7 @@ export default function UltimateAIFunnel() {
           {/* Question 2: Missed calls */}
           {userData.currentReceptionist && (
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-              <h3 className="text-xl font-bold mb-4">Combien d'appels tu manques par semaine?</h3>
+              <h3 className="text-xl font-bold mb-4">Combien d&apos;appels tu manques par semaine?</h3>
               <input
                 type="range"
                 min="0"
@@ -464,7 +464,7 @@ export default function UltimateAIFunnel() {
           {/* Question 3: Average job value */}
           {userData.missedCallsPerWeek > 0 && (
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-              <h3 className="text-xl font-bold mb-4">Valeur moyenne d'un contrat?</h3>
+              <h3 className="text-xl font-bold mb-4">Valeur moyenne d&apos;un contrat?</h3>
               <div className="grid grid-cols-2 gap-3">
                 {[500, 750, 1000, 1500, 2000, 3000].map((value) => (
                   <button
@@ -477,8 +477,8 @@ export default function UltimateAIFunnel() {
                     }}
                     className={`p-4 rounded-xl border-2 transition-all ${
                       userData.averageJobValue === value
-                        ? 'bg-green-600 border-green-400'
-                        : 'bg-white/10 border-white/20 hover:border-green-400'
+                        ? &apos;bg-green-600 border-green-400&apos;
+                        : &apos;bg-white/10 border-white/20 hover:border-green-400&apos;
                     }`}
                   >
                     {formatCurrency(value)}
@@ -504,37 +504,37 @@ export default function UltimateAIFunnel() {
           {/* Question 4: Urgency */}
           {userData.weeklyLoss > 0 && (
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-              <h3 className="text-xl font-bold mb-4">À quel point c'est urgent de régler ça?</h3>
+              <h3 className="text-xl font-bold mb-4">À quel point c&apos;est urgent de régler ça?</h3>
               <div className="grid gap-3">
                 <button
-                  onClick={() => updateUserData({ urgency: 'urgent' })}
+                  onClick={() => updateUserData({ urgency: &apos;urgent&apos; })}
                   className={`p-4 rounded-xl border-2 transition-all ${
-                    userData.urgency === 'urgent'
-                      ? 'bg-red-600 border-red-400'
-                      : 'bg-white/10 border-white/20 hover:border-red-400'
+                    userData.urgency === &apos;urgent&apos;
+                      ? &apos;bg-red-600 border-red-400&apos;
+                      : &apos;bg-white/10 border-white/20 hover:border-red-400&apos;
                   }`}
                 >
-                  🚨 URGENT - Je perds trop d'argent
+                  🚨 URGENT - Je perds trop d&apos;argent
                 </button>
                 <button
-                  onClick={() => updateUserData({ urgency: 'soon' })}
+                  onClick={() => updateUserData({ urgency: &apos;soon&apos; })}
                   className={`p-4 rounded-xl border-2 transition-all ${
-                    userData.urgency === 'soon'
-                      ? 'bg-orange-600 border-orange-400'
-                      : 'bg-white/10 border-white/20 hover:border-orange-400'
+                    userData.urgency === &apos;soon&apos;
+                      ? &apos;bg-orange-600 border-orange-400&apos;
+                      : &apos;bg-white/10 border-white/20 hover:border-orange-400&apos;
                   }`}
                 >
                   ⏰ Bientôt - Dans les prochaines semaines
                 </button>
                 <button
-                  onClick={() => updateUserData({ urgency: 'exploring' })}
+                  onClick={() => updateUserData({ urgency: &apos;exploring&apos; })}
                   className={`p-4 rounded-xl border-2 transition-all ${
-                    userData.urgency === 'exploring'
-                      ? 'bg-blue-600 border-blue-400'
-                      : 'bg-white/10 border-white/20 hover:border-blue-400'
+                    userData.urgency === &apos;exploring&apos;
+                      ? &apos;bg-blue-600 border-blue-400&apos;
+                      : &apos;bg-white/10 border-white/20 hover:border-blue-400&apos;
                   }`}
                 >
-                  🔍 J'explore mes options
+                  🔍 J&apos;explore mes options
                 </button>
               </div>
             </div>
@@ -546,31 +546,31 @@ export default function UltimateAIFunnel() {
               <h3 className="text-xl font-bold mb-4">As-tu le budget pour investir dans une solution?</h3>
               <div className="grid gap-3">
                 <button
-                  onClick={() => updateUserData({ budget: 'ready' })}
+                  onClick={() => updateUserData({ budget: &apos;ready&apos; })}
                   className={`p-4 rounded-xl border-2 transition-all ${
-                    userData.budget === 'ready'
-                      ? 'bg-green-600 border-green-400'
-                      : 'bg-white/10 border-white/20 hover:border-green-400'
+                    userData.budget === &apos;ready&apos;
+                      ? &apos;bg-green-600 border-green-400&apos;
+                      : &apos;bg-white/10 border-white/20 hover:border-green-400&apos;
                   }`}
                 >
                   ✅ Oui, prêt à investir maintenant
                 </button>
                 <button
-                  onClick={() => updateUserData({ budget: 'planned' })}
+                  onClick={() => updateUserData({ budget: &apos;planned&apos; })}
                   className={`p-4 rounded-xl border-2 transition-all ${
-                    userData.budget === 'planned'
-                      ? 'bg-yellow-600 border-yellow-400'
-                      : 'bg-white/10 border-white/20 hover:border-yellow-400'
+                    userData.budget === &apos;planned&apos;
+                      ? &apos;bg-yellow-600 border-yellow-400&apos;
+                      : &apos;bg-white/10 border-white/20 hover:border-yellow-400&apos;
                   }`}
                 >
                   📅 Oui, mais dans quelques mois
                 </button>
                 <button
-                  onClick={() => updateUserData({ budget: 'tight' })}
+                  onClick={() => updateUserData({ budget: &apos;tight&apos; })}
                   className={`p-4 rounded-xl border-2 transition-all ${
-                    userData.budget === 'tight'
-                      ? 'bg-gray-600 border-gray-400'
-                      : 'bg-white/10 border-white/20 hover:border-gray-400'
+                    userData.budget === &apos;tight&apos;
+                      ? &apos;bg-gray-600 border-gray-400&apos;
+                      : &apos;bg-white/10 border-white/20 hover:border-gray-400&apos;
                   }`}
                 >
                   ❌ Non, budget serré
@@ -585,7 +585,7 @@ export default function UltimateAIFunnel() {
               onClick={handleQualificationComplete}
               className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-6 rounded-xl font-bold text-xl hover:shadow-2xl transform hover:scale-105 transition-all flex items-center justify-center"
             >
-              Voir Mon Plan d'Action Personnalisé <ChevronRight className="ml-2" />
+              Voir Mon Plan d&apos;Action Personnalisé <ChevronRight className="ml-2" />
             </button>
           )}
         </div>
@@ -634,7 +634,7 @@ export default function UltimateAIFunnel() {
           
           <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl p-8 mb-8">
             <h3 className="text-2xl font-bold mb-4 text-center">
-              🔥 DÉMO LIVE - Appelle et Teste l'IA MAINTENANT!
+              🔥 DÉMO LIVE - Appelle et Teste l&apos;IA MAINTENANT!
             </h3>
             
             <div className="bg-black/30 rounded-2xl p-6 mb-6">
@@ -642,14 +642,14 @@ export default function UltimateAIFunnel() {
                 <p className="text-yellow-300 font-bold text-xl mb-2">
                   📞 APPELLE MAINTENANT: (438) 900-4385
                 </p>
-                <p className="text-sm opacity-80">Ou clique sur le widget pour parler à l'IA</p>
+                <p className="text-sm opacity-80">Ou clique sur le widget pour parler à l&apos;IA</p>
               </div>
               
               {/* AI Widget */}
               <div className="bg-white rounded-xl p-4 text-gray-900 min-h-[400px]">
                 <div 
                   dangerouslySetInnerHTML={{
-                    __html: '<elevenlabs-convai agent-id="agent_01jw7kxhkjef2tvn7a6jwpt4e9"></elevenlabs-convai>'
+                    __html: &apos;<elevenlabs-convai agent-id="agent_01jw7kxhkjef2tvn7a6jwpt4e9"></elevenlabs-convai>&apos;
                   }}
                 />
               </div>
@@ -657,7 +657,7 @@ export default function UltimateAIFunnel() {
             
             <div className="grid md:grid-cols-2 gap-4">
               <div className="bg-white/10 rounded-xl p-4">
-                <h4 className="font-bold mb-2">✅ Ce que l'IA fait:</h4>
+                <h4 className="font-bold mb-2">✅ Ce que l&apos;IA fait:</h4>
                 <ul className="space-y-2 text-sm">
                   <li>• Répond en français québécois</li>
                   <li>• Qualifie les clients</li>
@@ -714,7 +714,7 @@ export default function UltimateAIFunnel() {
           </p>
         </div>
 
-        {/* What's included */}
+        {/* What&apos;s included */}
         <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 mb-8">
           <h2 className="text-2xl font-bold mb-6 text-center">✅ Tout Ce Qui Est Inclus:</h2>
           
@@ -827,7 +827,7 @@ export default function UltimateAIFunnel() {
             
             <div className="bg-gray-800 rounded-xl p-6 mb-6 text-sm space-y-4">
               <p><strong>Client:</strong> {userData.name} - {userData.businessName}</p>
-              <p><strong>Service:</strong> Installation et gestion d'une IA réceptionniste</p>
+              <p><strong>Service:</strong> Installation et gestion d&apos;une IA réceptionniste</p>
               <p><strong>Investissement:</strong> 5,000$ installation + 500$/mois</p>
               <p><strong>Délai:</strong> Installation complète en 30 jours</p>
               
@@ -838,7 +838,7 @@ export default function UltimateAIFunnel() {
                   <li>• Frais mensuels de 500$ à partir du 2e mois</li>
                   <li>• Garantie de satisfaction 30 jours</li>
                   <li>• Support technique illimité inclus</li>
-                  <li>• Mises à jour automatiques de l'IA</li>
+                  <li>• Mises à jour automatiques de l&apos;IA</li>
                   <li>• Annulation possible avec préavis de 30 jours</li>
                 </ul>
               </div>
@@ -902,7 +902,7 @@ export default function UltimateAIFunnel() {
               </div>
               <div className="border-t border-green-600 pt-2 mt-2">
                 <div className="flex justify-between text-lg font-bold">
-                  <span>Total aujourd'hui</span>
+                  <span>Total aujourd&apos;hui</span>
                   <span>5,000$ CAD</span>
                 </div>
               </div>
@@ -941,7 +941,7 @@ export default function UltimateAIFunnel() {
             Félicitations {userData.name}! 🎉
           </h1>
           <p className="text-xl text-pink-200">
-            Tu fais maintenant partie de l'élite qui ne perd JAMAIS d'appels
+            Tu fais maintenant partie de l&apos;élite qui ne perd JAMAIS d&apos;appels
           </p>
         </div>
 
@@ -990,7 +990,7 @@ export default function UltimateAIFunnel() {
               </div>
               <div>
                 <h3 className="font-bold text-lg">3. Tests et Formation</h3>
-                <p className="opacity-80">Tu testes l'IA et on ajuste ensemble</p>
+                <p className="opacity-80">Tu testes l&apos;IA et on ajuste ensemble</p>
               </div>
             </div>
             
@@ -1023,7 +1023,7 @@ export default function UltimateAIFunnel() {
           <div className="bg-gradient-to-br from-green-600 to-emerald-600 rounded-2xl p-6 text-center">
             <Users className="w-12 h-12 mx-auto mb-3" />
             <h3 className="font-bold mb-2">Communauté VIP</h3>
-            <p className="text-sm opacity-90">Réseau d'entrepreneurs élite</p>
+            <p className="text-sm opacity-90">Réseau d&apos;entrepreneurs élite</p>
           </div>
         </div>
 
@@ -1115,7 +1115,7 @@ export default function UltimateAIFunnel() {
             <div className="bg-white/10 rounded-xl p-6">
               <Video className="w-8 h-8 text-pink-400 mb-3" />
               <h3 className="font-bold mb-2">Formation Avancée</h3>
-              <p className="text-sm opacity-80 mb-4">Maximise ton ROI avec l'IA</p>
+              <p className="text-sm opacity-80 mb-4">Maximise ton ROI avec l&apos;IA</p>
               <button className="text-pink-400 font-bold text-sm hover:underline">
                 Accéder aux vidéos →
               </button>
