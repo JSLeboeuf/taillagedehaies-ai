@@ -1,4 +1,3 @@
-// app/page.tsx - Funnel principal pour taillagedehaies.ai
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
