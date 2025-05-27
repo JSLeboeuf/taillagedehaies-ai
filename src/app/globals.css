@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Animations personnalisées */
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes fade-in-up {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+@keyframes bounce-in {
+  0% { 
+    transform: scale(0.3); 
+    opacity: 0; 
+  }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.9); }
+  100% { 
+    transform: scale(1); 
+    opacity: 1; 
+  }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Classes utilitaires */
+.animate-bounce-slow {
+  animation: bounce-slow 3s infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out;
+}
+
+.animate-progress {
+  animation: progress 3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}
+
+/* Styles pour le widget IA */
+elevenlabs-convai {
+  width: 100%;
+  height: 400px;
+}
+
+/* Amélioration de la typographie */
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
+  
+  p {
+    @apply leading-relaxed;
+  }
+}
+
+/* Transitions smooth par défaut */
+* {
+  @apply transition-colors duration-200;
+}
